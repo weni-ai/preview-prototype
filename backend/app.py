@@ -5,6 +5,7 @@ import logging
 import json
 import os
 from dotenv import load_dotenv
+from anthropic import Anthropic
 
 load_dotenv()
 
@@ -21,6 +22,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+anthropic = Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))
+
 def get_bedrock_client():
     session = boto3.Session(
         aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
@@ -29,6 +32,32 @@ def get_bedrock_client():
         region_name=os.getenv('AWS_REGION')
     )
     return session.client(service_name="bedrock-agent-runtime")
+
+def get_trace_summary(trace):
+    try:
+        prompt = f"""
+        Summarize this Bedrock Agent trace in a clear and concise way, focusing on what the agent is doing in this step:
+        
+        {json.dumps(trace, indent=2)}
+        
+        Provide a one-line summary that captures the key action or decision being made.
+        """
+
+        print(f"Prompt: {prompt}")
+        message = anthropic.messages.create(
+            model="claude-3-5-haiku-20241022",
+            max_tokens=100,
+            messages=[{
+                "role": "user",
+                "content": prompt
+            }]
+        )
+        print(f"Response: {message.content[0].text}")
+        
+        return message.content[0].text
+    except Exception as e:
+        logger.error(f"Error getting trace summary: {str(e)}")
+        return "Processing step"
 
 @app.route('/api/chat', methods=['POST'])
 def chat():
@@ -68,16 +97,40 @@ def chat():
             }
         )
 
+        event_stream = response["completion"]
         traces = []
         final_response = None
 
-        event_stream = response["completion"]
         for event in event_stream:
             if 'chunk' in event:
                 data = event['chunk']['bytes']
                 final_response = data.decode('utf-8')
             elif 'trace' in event:
-                traces.append(event['trace'])
+                trace_data = event['trace']
+                if 'type' in trace_data:
+                    formatted_trace = {
+                        'type': trace_data['type'],
+                        'modelInvocationInput': trace_data.get('modelInvocationInput', {}),
+                        'modelInvocationOutput': {}
+                    }
+                    
+                    # Handle different trace types
+                    if trace_data['type'] == 'PRE_PROCESSING':
+                        formatted_trace['modelInvocationOutput'] = trace_data.get('modelInvocationOutput', {})
+                    elif trace_data['type'] == 'ORCHESTRATION':
+                        formatted_trace['modelInvocationOutput'] = {
+                            'rationale': trace_data.get('rationale', {}),
+                            'observation': trace_data.get('observation', {})
+                        }
+                    elif trace_data['type'] == 'POST_PROCESSING':
+                        formatted_trace['modelInvocationOutput'] = trace_data.get('modelInvocationOutput', {})
+                    
+                    # Get summary from Claude
+                    formatted_trace['summary'] = get_trace_summary(trace_data)
+                    traces.append(formatted_trace)
+                else:
+                    trace_data['summary'] = get_trace_summary(trace_data)
+                    traces.append(trace_data)
 
         return jsonify({
             'message': final_response,
