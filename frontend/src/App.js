@@ -22,13 +22,19 @@ function App() {
       // Add agent message
       setMessages(prev => [...prev, { type: 'agent', text: response.data.message }]);
       
-      // Update traces
-      setTraces(response.data.traces);
+      // Update traces - handle the structured trace data
+      if (response.data.traces) {
+        setTraces(response.data.traces);
+      }
     } catch (error) {
       console.error('Error:', error);
       setMessages(prev => [...prev, { 
         type: 'agent', 
         text: 'Sorry, there was an error processing your request.' 
+      }]);
+      // Add error trace
+      setTraces(prev => [...prev, {
+        failureReason: error.message || 'Unknown error occurred'
       }]);
     }
   };
