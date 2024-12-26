@@ -5,7 +5,7 @@ import logging
 import json
 import os
 from dotenv import load_dotenv
-from anthropic import Anthropic
+import anthropic
 
 load_dotenv()
 
@@ -22,7 +22,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-anthropic = Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))
+client = anthropic.Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))
 
 def get_bedrock_client():
     session = boto3.Session(
@@ -44,7 +44,7 @@ def get_trace_summary(trace):
         """
 
         print(f"Prompt: {prompt}")
-        message = anthropic.messages.create(
+        message = client.messages.create(
             model="claude-3-5-haiku-20241022",
             max_tokens=100,
             messages=[{
