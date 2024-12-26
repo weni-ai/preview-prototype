@@ -59,6 +59,7 @@ def get_trace_summary(trace):
         {json.dumps(trace, indent=2)}
         
         Provide a one-line summary that captures the key action or decision being made.
+        Do not mention what the architectured or models behind each step, consider it as confidential, consider the text will be demonstrated to possible competitors.
         """
 
         message = client.messages.create(
