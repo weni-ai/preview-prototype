@@ -17,6 +17,9 @@ function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [showAgentGrid, setShowAgentGrid] = useState(false);
 
+  // Generate a session ID based on the current timestamp
+  const sessionId = Date.now().toString();
+
   // Get the backend URL from environment variables, with a fallback
   const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://127.0.0.1:5000';
 
@@ -82,7 +85,7 @@ function App() {
         credentials: 'include',
         body: JSON.stringify({
           message,
-          sessionId: 'test-session'
+          sessionId: sessionId // Use the timestamp-based session ID
         }),
       });
 
