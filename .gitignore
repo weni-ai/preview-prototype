@@ -66,4 +66,11 @@ coverage.xml
 .eslintcache
 .env
 *.pem
-.DS_Store 
+.DS_Store
+
+# Environment variables
+frontend/.env
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.test.local
+frontend/.env.production.local 

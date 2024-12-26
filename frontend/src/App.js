@@ -10,10 +10,13 @@ function App() {
   const [messages, setMessages] = useState([]);
   const [traces, setTraces] = useState([]);
   const [socket, setSocket] = useState(null);
+  
+  // Get the backend URL from environment variables, with a fallback
+  const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://127.0.0.1:5000';
 
   useEffect(() => {
-    // Initialize socket connection with proper configuration
-    const newSocket = io('http://127.0.0.1:5000', {
+    // Use BACKEND_URL in socket connection
+    const newSocket = io(BACKEND_URL, {
         transports: ['websocket', 'polling'],
         cors: {
             origin: "http://localhost:3000",
@@ -68,7 +71,8 @@ function App() {
       // Initialize an empty agent message that will be updated in real-time
       setMessages(prev => [...prev, { type: 'agent', text: '' }]);
 
-      const response = await axios.post('http://127.0.0.1:5000/api/chat', {
+      // Use BACKEND_URL in axios request
+      const response = await axios.post(`${BACKEND_URL}/api/chat`, {
         message: text,
         sessionId: 'test-session'
       }, {
