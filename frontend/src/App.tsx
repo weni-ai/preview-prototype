@@ -169,6 +169,7 @@ function App() {
                   message={trace.summary}
                   type={trace.type}
                   isActive={index === traces.length - 1}
+                  fullTrace={trace}
                 />
               ))}
             </div>

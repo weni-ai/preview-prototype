@@ -1,13 +1,15 @@
 import React from 'react';
 import { Bot, Sparkles } from 'lucide-react';
+import { JsonViewer } from './JsonViewer';
 
 interface BotResponseProps {
   message: string;
   type?: string;
   isActive?: boolean;
+  fullTrace?: any;
 }
 
-export function BotResponse({ message, type, isActive }: BotResponseProps) {
+export function BotResponse({ message, type, isActive, fullTrace }: BotResponseProps) {
   return (
     <div className={`
       bg-gradient-to-r from-indigo-50/50 to-purple-50/50 
@@ -28,6 +30,7 @@ export function BotResponse({ message, type, isActive }: BotResponseProps) {
             </div>
           )}
           <p className="text-sm text-gray-700">{message}</p>
+          {fullTrace && <JsonViewer jsonContent={fullTrace} />}
         </div>
       </div>
     </div>
