@@ -5,6 +5,9 @@ import { AgentNode } from './components/AgentNode';
 import { motion } from 'framer-motion';
 import { sendChatMessage } from './services/api';
 import type { Message, Trace } from './types';
+import { AgentGrid } from './components/AgentGrid';
+import { BotResponse } from './components/BotResponse';
+import { Sparkles } from 'lucide-react';
 
 function App() {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -12,6 +15,7 @@ function App() {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [expandedTraces, setExpandedTraces] = useState<Set<number>>(new Set());
   const [isLoading, setIsLoading] = useState(false);
+  const [showAgentGrid, setShowAgentGrid] = useState(false);
 
   // Get the backend URL from environment variables, with a fallback
   const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://127.0.0.1:5000';
@@ -121,39 +125,55 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-4 py-8">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="grid grid-cols-1 lg:grid-cols-2 gap-8"
-        >
-          <div className="h-[800px]">
-            <Chat 
-              messages={messages} 
-              onSendMessage={handleSendMessage} 
-              isLoading={isLoading}
-            />
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
+      <div className="container mx-auto px-4 py-12">
+        <div className="max-w-4xl mx-auto space-y-8">
+          <div className="text-center space-y-2">
+            <div className="flex items-center justify-center gap-2">
+              <Sparkles className="w-8 h-8 text-indigo-500" />
+              <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">
+                Weni Multi-Agent Preview
+              </h1>
+              <Sparkles className="w-8 h-8 text-purple-500" />
+            </div>
+            <p className="text-gray-600">Collaborative AI agents working together</p>
           </div>
-          
-          <div className="h-[800px] overflow-y-auto bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-xl font-semibold mb-6">Agent Orchestration</h2>
-            <div className="space-y-4">
+
+          {showAgentGrid && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="relative h-[400px]"
+            >
+              <AgentGrid 
+                traces={traces}
+                activeAgent={isLoading ? traces.length : -1}
+              />
+            </motion.div>
+          )}
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="h-[400px]">
+              <Chat 
+                messages={messages} 
+                onSendMessage={handleSendMessage} 
+                isLoading={isLoading}
+              />
+            </div>
+            
+            <div className="h-[400px] overflow-y-auto bg-white rounded-lg shadow-md p-6">
+              <h2 className="text-xl font-semibold mb-6">Processing Steps</h2>
               {traces.map((trace, index) => (
-                <AgentNode
+                <BotResponse
                   key={index}
-                  type={trace.type || 'Processing Step'}
-                  status={index === traces.length - 1 ? 'active' : 'completed'}
-                  summary={trace.summary || 'Processing...'}
-                  details={trace}
-                  isExpanded={expandedTraces.has(index)}
-                  onToggle={() => toggleTrace(index)}
-                  onCopy={() => copyTrace(trace)}
+                  message={trace.summary}
+                  type={trace.type}
+                  isActive={index === traces.length - 1}
                 />
               ))}
             </div>
           </div>
-        </motion.div>
+        </div>
       </div>
     </div>
   );

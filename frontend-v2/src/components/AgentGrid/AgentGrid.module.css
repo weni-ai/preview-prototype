@@ -1,0 +1,19 @@
+.gridContainer {
+  position: relative;
+  width: 100%;
+  padding: 2rem;
+}
+
+.agentsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 2rem;
+  position: relative;
+  z-index: 1;
+}
+
+@media (max-width: 768px) {
+  .agentsGrid {
+    grid-template-columns: 1fr;
+  }
+} 
