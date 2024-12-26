@@ -12,26 +12,26 @@ load_dotenv()
 
 app = Flask(__name__)
 
-# Update CORS configuration to include your Heroku domain
+# Update CORS configuration to handle preflight requests properly
 CORS(app,
     resources={
         r"/api/*": {
-            "origins": ["http://localhost:3000", "http://localhost:5173", "https://multiagent-preview.netlify.app", "https://your-app-name.herokuapp.com"],
-            "methods": ["GET", "POST", "OPTIONS"],
-            "allow_headers": ["Content-Type", "Authorization", "Accept"],
+            "origins": ["http://localhost:3000", "http://localhost:5173", "https://multiagent-preview.netlify.app"],
+            "methods": ["GET", "POST", "OPTIONS"],  # Explicitly include OPTIONS
+            "allow_headers": ["Content-Type", "Authorization", "Accept"],  # Add commonly needed headers
             "expose_headers": ["Content-Type"],
             "supports_credentials": True,
             "send_wildcard": False,
-            "max_age": 3600
+            "max_age": 3600  # Cache preflight request results for 1 hour
         }
     },
     supports_credentials=True
 )
 
-# Update SocketIO CORS settings
+# Configure SocketIO with proper CORS settings
 socketio = SocketIO(app,
-    cors_allowed_origins=["http://localhost:3000", "http://localhost:5173", "https://multiagent-preview.netlify.app", "https://your-app-name.herokuapp.com"],
-    async_mode='eventlet'  # Change to eventlet
+    cors_allowed_origins=["http://localhost:3000", "http://localhost:5173", "https://multiagent-preview.netlify.app"],
+    async_mode='threading'
 )
 
 logging.basicConfig(
@@ -166,5 +166,5 @@ def chat():
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
-    port = int(os.getenv('PORT', 5000))
-    socketio.run(app, host='0.0.0.0', port=port)
+    # app.run(port=5000, debug=True)
+    socketio.run(app, port=5000, debug=True) 
