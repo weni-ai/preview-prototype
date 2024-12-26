@@ -16,7 +16,7 @@ app = Flask(__name__)
 CORS(app,
     resources={
         r"/api/*": {
-            "origins": ["http://localhost:3000", "https://676d649c2c9c02cd8aaac424--multiagent-preview.netlify.app"],
+            "origins": ["http://localhost:3000", "http://localhost:5173", "https://676d649c2c9c02cd8aaac424--multiagent-preview.netlify.app"],
             "methods": ["GET", "POST", "OPTIONS"],  # Explicitly include OPTIONS
             "allow_headers": ["Content-Type", "Authorization", "Accept"],  # Add commonly needed headers
             "expose_headers": ["Content-Type"],
@@ -30,7 +30,7 @@ CORS(app,
 
 # Configure SocketIO with proper CORS settings
 socketio = SocketIO(app,
-    cors_allowed_origins=["http://localhost:3000", "https://676d649c2c9c02cd8aaac424--multiagent-preview.netlify.app"],
+    cors_allowed_origins=["http://localhost:3000", "http://localhost:5173", "https://676d649c2c9c02cd8aaac424--multiagent-preview.netlify.app"],
     async_mode='threading'
 )
 
