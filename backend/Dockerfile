@@ -14,7 +14,6 @@ COPY . .
 
 # Set environment variables
 ENV PORT=5000
-ENV PYTHONUNBUFFERED=1
 
 # Command to run the application
-CMD gunicorn --worker-class eventlet -w 1 --log-level debug --timeout 120 --keep-alive 5 --access-logfile - app:app --bind 0.0.0.0:$PORT 
+CMD gunicorn --worker-class eventlet -w 1 app:app --bind 0.0.0.0:$PORT 
