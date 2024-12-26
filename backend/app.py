@@ -43,7 +43,6 @@ def get_trace_summary(trace):
         Provide a one-line summary that captures the key action or decision being made.
         """
 
-        print(f"Prompt: {prompt}")
         message = client.messages.create(
             model="claude-3-5-haiku-20241022",
             max_tokens=100,
@@ -52,7 +51,6 @@ def get_trace_summary(trace):
                 "content": prompt
             }]
         )
-        print(f"Response: {message.content[0].text}")
         
         return message.content[0].text
     except Exception as e:
