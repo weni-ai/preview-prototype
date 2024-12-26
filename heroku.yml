@@ -1,3 +1,6 @@
 build:
   docker:
-    web: backend/Dockerfile 
+    web: backend/Dockerfile
+setup:
+  config:
+    NGINX_CONF: nginx.conf.erb 

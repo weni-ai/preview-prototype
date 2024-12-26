@@ -30,8 +30,12 @@ CORS(app,
 
 # Update SocketIO CORS settings
 socketio = SocketIO(app,
-    cors_allowed_origins=["http://localhost:3000", "http://localhost:5173", "https://multiagent-preview.netlify.app", "https://your-app-name.herokuapp.com"],
-    async_mode='eventlet'  # Change to eventlet
+    cors_allowed_origins=["http://localhost:3000", "http://localhost:5173", "https://multiagent-preview.netlify.app", "https://your-frontend-domain.com"],
+    async_mode='eventlet',
+    ping_timeout=60,
+    ping_interval=25,
+    logger=True,
+    engineio_logger=True
 )
 
 logging.basicConfig(
