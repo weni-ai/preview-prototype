@@ -1,38 +1,91 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Container, Grid } from '@mui/material';
 import Chat from './components/Chat';
 import AgentPanel from './components/AgentPanel';
 import axios from 'axios';
+import io from 'socket.io-client';
 import './index.css';
 
 function App() {
   const [messages, setMessages] = useState([]);
   const [traces, setTraces] = useState([]);
+  const [socket, setSocket] = useState(null);
+
+  useEffect(() => {
+    // Initialize socket connection with proper configuration
+    const newSocket = io('http://127.0.0.1:5000', {
+        transports: ['websocket', 'polling'],
+        cors: {
+            origin: "http://localhost:3000",
+            credentials: true
+        }
+    });
+    
+    // Add connection event handlers
+    newSocket.on('connect', () => {
+        console.log('Connected to Socket.IO server');
+    });
+
+    newSocket.on('connect_error', (error) => {
+        console.error('Socket.IO connection error:', error);
+    });
+
+    newSocket.on('response_chunk', (data) => {
+      // Update the last assistant message with new chunks
+      setMessages(prev => {
+        const lastMessage = prev[prev.length - 1];
+        if (lastMessage && lastMessage.type === 'agent') {
+          const updatedMessages = [...prev.slice(0, -1)];
+          updatedMessages.push({
+            ...lastMessage,
+            text: (lastMessage.text || '') + data.content
+          });
+          return updatedMessages;
+        }
+        return prev;
+      });
+    });
+
+    newSocket.on('trace_update', (data) => {
+      setTraces(prev => [...prev, data.trace]);
+    });
+
+    setSocket(newSocket);
+
+    return () => {
+      newSocket.close();
+    };
+  }, []);
 
   const handleSendMessage = async (text) => {
     // Add user message
     setMessages(prev => [...prev, { type: 'user', text }]);
+    
+    // Clear previous traces for new conversation
+    setTraces([]);
 
     try {
+      // Initialize an empty agent message that will be updated in real-time
+      setMessages(prev => [...prev, { type: 'agent', text: '' }]);
+
       const response = await axios.post('http://127.0.0.1:5000/api/chat', {
         message: text,
         sessionId: 'test-session'
+      }, {
+        // Add these headers and settings
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        withCredentials: true
       });
 
-      // Add agent message
-      setMessages(prev => [...prev, { type: 'agent', text: response.data.message }]);
-      
-      // Update traces - handle the structured trace data
-      if (response.data.traces) {
-        setTraces(response.data.traces);
-      }
+      // The final message and traces will be updated through WebSocket events
     } catch (error) {
       console.error('Error:', error);
       setMessages(prev => [...prev, { 
         type: 'agent', 
         text: 'Sorry, there was an error processing your request.' 
       }]);
-      // Add error trace
       setTraces(prev => [...prev, {
         failureReason: error.message || 'Unknown error occurred'
       }]);

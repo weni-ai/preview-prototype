@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from flask_socketio import SocketIO, emit
 import boto3
 import logging
 import json
@@ -10,11 +11,28 @@ import anthropic
 load_dotenv()
 
 app = Flask(__name__)
-CORS(app, resources={r"/api/*": {
-    "origins": "http://localhost:3000",
-    "methods": ["GET", "POST", "OPTIONS"],
-    "allow_headers": ["Content-Type"]
-}})
+
+# Update CORS configuration to handle preflight requests properly
+CORS(app,
+    resources={
+        r"/api/*": {
+            "origins": "http://localhost:3000",
+            "methods": ["GET", "POST", "OPTIONS"],  # Explicitly include OPTIONS
+            "allow_headers": ["Content-Type", "Authorization", "Accept"],  # Add commonly needed headers
+            "expose_headers": ["Content-Type"],
+            "supports_credentials": True,
+            "send_wildcard": False,
+            "max_age": 3600  # Cache preflight request results for 1 hour
+        }
+    },
+    supports_credentials=True
+)
+
+# Configure SocketIO with proper CORS settings
+socketio = SocketIO(app,
+    cors_allowed_origins="http://localhost:3000",
+    async_mode='threading'
+)
 
 logging.basicConfig(
     format='[%(asctime)s] p%(process)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s',
@@ -102,7 +120,10 @@ def chat():
         for event in event_stream:
             if 'chunk' in event:
                 data = event['chunk']['bytes']
-                final_response = data.decode('utf-8')
+                content = data.decode('utf-8')
+                final_response = content
+                # Emit the chunk in real-time
+                socketio.emit('response_chunk', {'content': content})
             elif 'trace' in event:
                 trace_data = event['trace']
                 if 'type' in trace_data:
@@ -126,9 +147,13 @@ def chat():
                     # Get summary from Claude
                     formatted_trace['summary'] = get_trace_summary(trace_data)
                     traces.append(formatted_trace)
+                    # Emit the trace in real-time
+                    socketio.emit('trace_update', {'trace': formatted_trace})
                 else:
                     trace_data['summary'] = get_trace_summary(trace_data)
                     traces.append(trace_data)
+                    # Emit the trace in real-time
+                    socketio.emit('trace_update', {'trace': trace_data})
 
         return jsonify({
             'message': final_response,
@@ -140,4 +165,5 @@ def chat():
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(port=5000, debug=True) 
+    # app.run(port=5000, debug=True)
+    socketio.run(app, port=5000, debug=True) 
