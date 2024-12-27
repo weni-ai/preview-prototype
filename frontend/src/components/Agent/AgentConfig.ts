@@ -3,9 +3,9 @@ import { Brain, Shield, HelpCircle, ShoppingBag } from 'lucide-react';
 export const agentConfig = {
   manager: {
     icon: Brain,
-    gradient: 'from-purple-500 to-indigo-500',
-    ringGradient: 'from-purple-200 to-indigo-200',
-    glowColor: 'purple',
+    gradient: 'from-[#00DED2] to-[#00DED2]/80',
+    ringGradient: 'from-[#00DED2]/20 to-[#00DED2]/10',
+    glowColor: '[#00DED2]',
     title: 'Manager',
     description: 'Coordinating the team',
     thinkingMessage: 'Analyzing request complexity and distributing tasks...'

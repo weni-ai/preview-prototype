@@ -145,83 +145,81 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
+    <div className="min-h-screen bg-gradient-to-br from-[#00DED2]/5 via-white to-[#00DED2]/10">
       <div className="container mx-auto px-8 py-12">
         <div className="max-w-[1400px] mx-auto space-y-12">
           <div className="text-center space-y-2">
             <div className="flex items-center justify-center gap-2">
-              <Sparkles className="w-8 h-8 text-indigo-500" />
-              <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">
+              <Sparkles className="w-8 h-8 text-[#00DED2]" />
+              <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-[#00DED2] to-[#00DED2]/80">
                 Weni Multi-Agent Preview
               </h1>
-              <Sparkles className="w-8 h-8 text-purple-500" />
+              <Sparkles className="w-8 h-8 text-[#00DED2]" />
             </div>
             <p className="text-gray-600">Collaborative AI agents working together</p>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <div className="bg-white rounded-xl shadow-sm p-6">
+            <div className="bg-white rounded-xl shadow-sm p-6 flex flex-col min-h-[600px]">
               <Chat
                 messages={messages}
                 onSendMessage={handleSendMessage}
                 isLoading={isLoading}
               />
             </div>
-            <div className="space-y-4">
-              <div className="bg-white rounded-xl shadow-sm">
-                <div className="flex border-b">
-                  <button
-                    className={`px-4 py-2 ${
-                      activeTab === 'visual'
-                        ? 'border-b-2 border-blue-500 text-blue-500'
-                        : 'text-gray-600'
-                    }`}
-                    onClick={() => setActiveTab('visual')}
-                  >
-                    Visual Flow
-                  </button>
-                  <button
-                    className={`px-4 py-2 ${
-                      activeTab === 'logs'
-                        ? 'border-b-2 border-blue-500 text-blue-500'
-                        : 'text-gray-600'
-                    }`}
-                    onClick={() => setActiveTab('logs')}
-                  >
-                    Logs
-                  </button>
-                </div>
-                {activeTab === 'visual' ? (
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="relative"
-                  >
-                    <OrchestrationFlow 
-                      traces={traces} 
-                      collaborators={collaborators}
-                    />
-                  </motion.div>
-                ) : (
-                  <div className="max-h-[600px] overflow-y-auto p-4">
-                    {traces.map((trace, index) => (
-                      <AgentNode
-                        key={index}
-                        type={trace.type === 'PRE_PROCESSING' ? 'Pre-processing' :
-                             trace.type === 'ORCHESTRATION' ? 'Orchestration' :
-                             trace.type === 'POST_PROCESSING' ? 'Post-processing' :
-                             trace.type === 'error' ? 'Error' : 'Processing'}
-                        status={index === traces.length - 1 ? 'active' : 'completed'}
-                        summary={trace.summary || 'Processing...'}
-                        details={trace}
-                        isExpanded={expandedTraces.has(index)}
-                        onToggle={() => toggleTrace(index)}
-                        onCopy={() => copyTrace(trace)}
-                      />
-                    ))}
-                  </div>
-                )}
+            <div className="bg-white rounded-xl shadow-sm flex flex-col min-h-[600px]">
+              <div className="flex border-b">
+                <button
+                  className={`px-4 py-2 ${
+                    activeTab === 'visual'
+                      ? 'border-b-2 border-blue-500 text-blue-500'
+                      : 'text-gray-600'
+                  }`}
+                  onClick={() => setActiveTab('visual')}
+                >
+                  Visual Flow
+                </button>
+                <button
+                  className={`px-4 py-2 ${
+                    activeTab === 'logs'
+                      ? 'border-b-2 border-blue-500 text-blue-500'
+                      : 'text-gray-600'
+                  }`}
+                  onClick={() => setActiveTab('logs')}
+                >
+                  Logs
+                </button>
               </div>
+              {activeTab === 'visual' ? (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="relative"
+                >
+                  <OrchestrationFlow 
+                    traces={traces} 
+                    collaborators={collaborators}
+                  />
+                </motion.div>
+              ) : (
+                <div className="max-h-[600px] overflow-y-auto p-4">
+                  {traces.map((trace, index) => (
+                    <AgentNode
+                      key={index}
+                      type={trace.type === 'PRE_PROCESSING' ? 'Pre-processing' :
+                           trace.type === 'ORCHESTRATION' ? 'Orchestration' :
+                           trace.type === 'POST_PROCESSING' ? 'Post-processing' :
+                           trace.type === 'error' ? 'Error' : 'Processing'}
+                      status={index === traces.length - 1 ? 'active' : 'completed'}
+                      summary={trace.summary || 'Processing...'}
+                      details={trace}
+                      isExpanded={expandedTraces.has(index)}
+                      onToggle={() => toggleTrace(index)}
+                      onCopy={() => copyTrace(trace)}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>

@@ -12,21 +12,21 @@ interface BotResponseProps {
 export function BotResponse({ message, type, isActive, fullTrace }: BotResponseProps) {
   return (
     <div className={`
-      bg-gradient-to-r from-indigo-50/50 to-purple-50/50 
+      bg-gradient-to-r from-[#00DED2]/5 to-[#00DED2]/10 
       backdrop-blur-sm rounded-2xl p-4 mb-4 
-      border border-indigo-100/50
+      border border-[#00DED2]/20
       transition-all duration-300
       ${isActive ? 'shadow-xl scale-105' : 'shadow'}
     `}>
       <div className="flex items-start gap-4">
-        <div className="p-2 bg-gradient-to-br from-indigo-600 via-purple-600 to-blue-600 rounded-lg">
+        <div className="p-2 bg-gradient-to-br from-[#00DED2] via-[#00DED2]/90 to-[#00DED2]/80 rounded-lg">
           <Bot className="w-4 h-4 text-white" />
         </div>
         <div className="flex-1">
           {type && (
             <div className="flex items-center gap-2 mb-1">
-              <p className="text-xs font-medium text-indigo-600">{type}</p>
-              {isActive && <Sparkles className="w-3 h-3 text-purple-500" />}
+              <p className="text-xs font-medium text-[#00DED2]">{type}</p>
+              {isActive && <Sparkles className="w-3 h-3 text-[#00DED2]" />}
             </div>
           )}
           <p className="text-sm text-gray-700">{message}</p>

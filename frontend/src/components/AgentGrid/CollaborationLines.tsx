@@ -16,8 +16,8 @@ export function CollaborationLines({ agents, activeAgent = -1 }: CollaborationLi
     <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 0 }}>
       <defs>
         <linearGradient id="line-gradient" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#6366f1" />
-          <stop offset="100%" stopColor="#8b5cf6" />
+          <stop offset="0%" stopColor="#00DED2" />
+          <stop offset="100%" stopColor="#00DED2" stopOpacity="0.8" />
         </linearGradient>
         
         <filter id="glow">
