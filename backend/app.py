@@ -185,20 +185,17 @@ def chat():
                     
                     # Get summary from Claude
                     formatted_trace['summary'] = get_trace_summary(trace_data)
-                    traces.append(formatted_trace)
                     # Emit the trace in real-time to specific session room
                     logger.info(f"Emitting trace update to session {session_id}")
                     socketio.emit('trace_update', {'trace': formatted_trace}, room=session_id)
                 else:
                     trace_data['summary'] = get_trace_summary(trace_data)
-                    traces.append(trace_data)
                     # Emit the trace in real-time to specific session room
                     logger.info(f"Emitting trace update to session {session_id}")
                     socketio.emit('trace_update', {'trace': trace_data}, room=session_id)
 
         return jsonify({
-            'message': final_response,
-            'traces': traces
+            'status': 'success'
         })
 
     except Exception as e:

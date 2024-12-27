@@ -44,60 +44,68 @@ function App() {
   }, [BACKEND_URL]);
 
   useEffect(() => {
-    const newSocket = io(BACKEND_URL, {
-      transports: ['websocket', 'polling'],
-      withCredentials: true,
-      extraHeaders: {
-        'Access-Control-Allow-Origin': 'http://localhost:3000'
+    let socket: Socket | null = null;
+
+    const connectSocket = () => {
+      if (socket?.connected) {
+        console.log('Socket already connected');
+        return;
       }
-    });
 
-    // Add connection event handlers
-    newSocket.on('connect', () => {
-      console.log('Connected to Socket.IO server');
-      // Join the session room when connected
-      newSocket.emit('join', { sessionId });
-      console.log('Joining session:', sessionId);
-    });
-
-    newSocket.on('connect_error', (error) => {
-      console.error('Socket.IO connection error:', error);
-    });
-
-    newSocket.on('disconnect', () => {
-      console.log('Disconnected from Socket.IO server');
-    });
-
-    newSocket.on('response_chunk', (data: { content: string }) => {
-      console.log('Received chunk in session', sessionId, ':', data);
-      // Update the last assistant message with new chunks
-      setMessages(prev => {
-        const lastMessage = prev[prev.length - 1];
-        if (lastMessage && lastMessage.type === 'assistant') {
-          const updatedMessages = [...prev.slice(0, -1)];
-          updatedMessages.push({
-            ...lastMessage,
-            text: (lastMessage.text || '') + data.content
-          });
-          return updatedMessages;
+      socket = io(BACKEND_URL, {
+        transports: ['websocket', 'polling'],
+        withCredentials: true,
+        extraHeaders: {
+          'Access-Control-Allow-Origin': 'http://localhost:3000'
         }
-        return prev;
       });
-    });
 
-    newSocket.on('trace_update', (data: { trace: Trace }) => {
-      console.log('Received trace in session', sessionId, ':', data);
-      setTraces(prev => [...prev, data.trace]);
-    });
+      socket.on('connect', () => {
+        console.log('Connected to Socket.IO server');
+        socket?.emit('join', { sessionId });
+        console.log('Joining session:', sessionId);
+      });
 
-    setSocket(newSocket);
+      socket.on('connect_error', (error) => {
+        console.error('Socket.IO connection error:', error);
+      });
 
-    // Cleanup function
+      socket.on('disconnect', () => {
+        console.log('Disconnected from Socket.IO server');
+      });
+
+      socket.on('response_chunk', (data: { content: string }) => {
+        console.log('Received chunk in session', sessionId, ':', data);
+        setMessages(prev => {
+          const lastMessage = prev[prev.length - 1];
+          if (lastMessage?.type === 'assistant') {
+            return [
+              ...prev.slice(0, -1),
+              {
+                ...lastMessage,
+                text: lastMessage.text + data.content
+              }
+            ];
+          }
+          return prev;
+        });
+      });
+
+      socket.on('trace_update', (data: { trace: Trace }) => {
+        console.log('Received trace in session', sessionId, ':', data);
+        setTraces(prev => [...prev, data.trace]);
+      });
+
+      setSocket(socket);
+    };
+
+    connectSocket();
+
     return () => {
-      console.log('Cleaning up socket connection');
-      if (newSocket.connected) {
-        newSocket.disconnect();
+      if (socket?.connected) {
+        socket.disconnect();
       }
+      socket = null;
     };
   }, [BACKEND_URL, sessionId]);
 
