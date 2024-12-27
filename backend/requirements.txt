@@ -7,6 +7,6 @@ boto3==1.35.87
 python-dotenv==0.19.0
 werkzeug==2.3.7
 tokenizers==0.13.3
-anthropic==0.42.0
+openai==1.58.1
 typing-extensions==4.12.2
 tenacity==9.0.0

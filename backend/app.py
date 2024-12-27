@@ -6,10 +6,10 @@ import logging
 import json
 import os
 from dotenv import load_dotenv
-import anthropic
 import traceback
 import time
 from tenacity import retry, stop_after_attempt, wait_exponential
+from openai import OpenAI
 
 load_dotenv()
 
@@ -43,7 +43,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-client = anthropic.Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))
+client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
 def get_bedrock_client():
     session = boto3.Session(
@@ -67,7 +67,7 @@ def get_bedrock_runtime_client():
 def get_trace_summary(trace):
     try:
         # Add a small delay between API calls to respect rate limits
-        time.sleep(5)
+        time.sleep(3)
         
         prompt = f"""
         Summarize this Bedrock Agent trace in a clear and concise way, focusing on what the agent is doing in this step:
@@ -78,8 +78,8 @@ def get_trace_summary(trace):
         Do not mention what the architectured or models behind each step, consider it as confidential, consider the text will be demonstrated to possible competitors.
         """
 
-        message = client.messages.create(
-            model="claude-3-5-haiku-20241022",
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
             max_tokens=100,
             messages=[{
                 "role": "user",
@@ -87,7 +87,7 @@ def get_trace_summary(trace):
             }]
         )
         
-        return message.content[0].text
+        return response.choices[0].message.content
     except Exception as e:
         logger.error(f"Error getting trace summary: {str(e)}")
         return "Processing step"

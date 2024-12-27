@@ -21,7 +21,8 @@ function App() {
   const [activeTab, setActiveTab] = useState<'visual' | 'logs'>('visual');
 
   // Generate a session ID based on the current timestamp
-  const sessionId = Date.now().toString();
+  const timestamp = Date.now();
+  const sessionId = new Date(timestamp).toISOString();
 
   // Get the backend URL from environment variables, with a fallback
   const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://127.0.0.1:5000';
