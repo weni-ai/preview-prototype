@@ -30,14 +30,14 @@ export function Chat({ messages, onSendMessage, isLoading }: ChatProps) {
 
   return (
     <div className="flex flex-col flex-1">
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-2 space-y-2">
         {messages.map((message, index) => (
           <div
             key={index}
             className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
           >
             <div
-              className={`max-w-[80%] rounded-2xl p-4 ${
+              className={`max-w-[80%] rounded-xl p-3 ${
                 message.type === 'user'
                   ? 'bg-gradient-to-r from-[#00DED2] to-[#00DED2]/80 text-white'
                   : 'bg-white border border-gray-100 shadow-sm text-gray-800'
@@ -50,24 +50,24 @@ export function Chat({ messages, onSendMessage, isLoading }: ChatProps) {
         <div ref={messagesEndRef} />
       </div>
 
-      <form onSubmit={handleSubmit} className="p-4 border-t bg-white rounded-b-xl">
+      <form onSubmit={handleSubmit} className="p-2 border-t bg-white rounded-b-xl">
         <div className="flex gap-2">
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Type your message..."
-            className="flex-1 px-4 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#00DED2] bg-gray-50"
+            className="flex-1 px-3 py-1.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#00DED2] bg-gray-50 text-sm"
             disabled={isLoading}
           />
           <button
             type="submit"
             disabled={isLoading}
-            className={`px-4 py-2 bg-gradient-to-r from-[#00DED2] to-[#00DED2]/80 text-white rounded-xl transition-all flex items-center gap-2
+            className={`px-3 py-1.5 bg-gradient-to-r from-[#00DED2] to-[#00DED2]/80 text-white rounded-lg transition-all flex items-center gap-1.5 text-sm
               ${isLoading ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-lg hover:-translate-y-0.5'}`}
           >
             <span>{isLoading ? 'Sending...' : 'Send'}</span>
-            <Send className="w-4 h-4" />
+            <Send className="w-3.5 h-3.5" />
           </button>
         </div>
       </form>
