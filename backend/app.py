@@ -10,7 +10,6 @@ import traceback
 import time
 from tenacity import retry, stop_after_attempt, wait_exponential
 from openai import OpenAI
-from config import OPENAI_API_KEY
 
 load_dotenv()
 
@@ -245,4 +244,3 @@ def list_collaborators():
 if __name__ == '__main__':
     # app.run(port=5000, debug=True)
     socketio.run(app, port=5000, debug=True) 
-
