@@ -8,6 +8,8 @@ import os
 from dotenv import load_dotenv
 import anthropic
 import traceback
+import time
+from tenacity import retry, stop_after_attempt, wait_exponential
 
 load_dotenv()
 
@@ -61,8 +63,12 @@ def get_bedrock_runtime_client():
     )
     return session.client(service_name="bedrock-agent-runtime")
 
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
 def get_trace_summary(trace):
     try:
+        # Add a small delay between API calls to respect rate limits
+        time.sleep(5)
+        
         prompt = f"""
         Summarize this Bedrock Agent trace in a clear and concise way, focusing on what the agent is doing in this step:
         
