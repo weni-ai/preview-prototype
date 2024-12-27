@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from flask_socketio import SocketIO, emit
+from flask_socketio import SocketIO, emit, join_room, disconnect
 import boto3
 import logging
 import json
@@ -92,12 +92,29 @@ def get_trace_summary(trace):
         logger.error(f"Error getting trace summary: {str(e)}")
         return "Processing step"
 
+# Socket.IO event handlers
+@socketio.on('connect')
+def handle_connect():
+    logger.info(f"Client connected with SID: {request.sid}")
+
+@socketio.on('join')
+def on_join(data):
+    session_id = data.get('sessionId', 'default-session')
+    join_room(session_id)
+    logger.info(f"Client {request.sid} joined room: {session_id}")
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    logger.info(f"Client disconnected with SID: {request.sid}")
+
 @app.route('/api/chat', methods=['POST'])
 def chat():
     try:
         data = request.json
         input_text = data.get('message')
         session_id = data.get('sessionId', 'default-session')
+        logger.info(f"Processing chat for session: {session_id}")
+        
         agent_id = os.getenv('BEDROCK_AGENT_ID')
         agent_alias = os.getenv('BEDROCK_AGENT_ALIAS')
         knowledge_base_id = os.getenv('BEDROCK_KNOWLEDGE_BASE_ID')
@@ -143,8 +160,9 @@ def chat():
                 data = event['chunk']['bytes']
                 content = data.decode('utf-8')
                 final_response = content
-                # Emit the chunk in real-time
-                socketio.emit('response_chunk', {'content': content})
+                # Emit the chunk in real-time to specific session room
+                logger.info(f"Emitting response chunk to session {session_id}")
+                socketio.emit('response_chunk', {'content': content}, room=session_id)
             elif 'trace' in event:
                 trace_data = event['trace']
                 if 'type' in trace_data:
@@ -168,13 +186,15 @@ def chat():
                     # Get summary from Claude
                     formatted_trace['summary'] = get_trace_summary(trace_data)
                     traces.append(formatted_trace)
-                    # Emit the trace in real-time
-                    socketio.emit('trace_update', {'trace': formatted_trace})
+                    # Emit the trace in real-time to specific session room
+                    logger.info(f"Emitting trace update to session {session_id}")
+                    socketio.emit('trace_update', {'trace': formatted_trace}, room=session_id)
                 else:
                     trace_data['summary'] = get_trace_summary(trace_data)
                     traces.append(trace_data)
-                    # Emit the trace in real-time
-                    socketio.emit('trace_update', {'trace': trace_data})
+                    # Emit the trace in real-time to specific session room
+                    logger.info(f"Emitting trace update to session {session_id}")
+                    socketio.emit('trace_update', {'trace': trace_data}, room=session_id)
 
         return jsonify({
             'message': final_response,

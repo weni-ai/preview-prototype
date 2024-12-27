@@ -20,9 +20,11 @@ function App() {
   const [collaborators, setCollaborators] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<'visual' | 'logs'>('visual');
 
-  // Generate a session ID based on the current timestamp
-  const timestamp = Date.now();
-  const sessionId = new Date(timestamp).toISOString();
+  // Generate a session ID once and store it in state
+  const [sessionId] = useState(() => {
+    const timestamp = Date.now();
+    return `session_${timestamp}`;
+  });
 
   // Get the backend URL from environment variables, with a fallback
   const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://127.0.0.1:5000';
@@ -53,13 +55,21 @@ function App() {
     // Add connection event handlers
     newSocket.on('connect', () => {
       console.log('Connected to Socket.IO server');
+      // Join the session room when connected
+      newSocket.emit('join', { sessionId });
+      console.log('Joining session:', sessionId);
     });
 
     newSocket.on('connect_error', (error) => {
       console.error('Socket.IO connection error:', error);
     });
 
+    newSocket.on('disconnect', () => {
+      console.log('Disconnected from Socket.IO server');
+    });
+
     newSocket.on('response_chunk', (data: { content: string }) => {
+      console.log('Received chunk in session', sessionId, ':', data);
       // Update the last assistant message with new chunks
       setMessages(prev => {
         const lastMessage = prev[prev.length - 1];
@@ -76,15 +86,20 @@ function App() {
     });
 
     newSocket.on('trace_update', (data: { trace: Trace }) => {
+      console.log('Received trace in session', sessionId, ':', data);
       setTraces(prev => [...prev, data.trace]);
     });
 
     setSocket(newSocket);
 
+    // Cleanup function
     return () => {
-      newSocket.close();
+      console.log('Cleaning up socket connection');
+      if (newSocket.connected) {
+        newSocket.disconnect();
+      }
     };
-  }, [BACKEND_URL]);
+  }, [BACKEND_URL, sessionId]);
 
   const handleSendMessage = async (message: string) => {
     setIsLoading(true);
