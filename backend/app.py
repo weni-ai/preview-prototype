@@ -7,6 +7,7 @@ import json
 import os
 from dotenv import load_dotenv
 import anthropic
+import traceback
 
 load_dotenv()
 
@@ -49,6 +50,15 @@ def get_bedrock_client():
         aws_session_token=os.getenv('AWS_SESSION_TOKEN'),
         region_name=os.getenv('AWS_REGION')
     )
+    return session.client(service_name="bedrock-agent")
+
+def get_bedrock_runtime_client():
+    session = boto3.Session(
+        aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
+        aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY'),
+        aws_session_token=os.getenv('AWS_SESSION_TOKEN'),
+        region_name=os.getenv('AWS_REGION')
+    )
     return session.client(service_name="bedrock-agent-runtime")
 
 def get_trace_summary(trace):
@@ -82,13 +92,17 @@ def chat():
         data = request.json
         input_text = data.get('message')
         session_id = data.get('sessionId', 'default-session')
+        agent_id = os.getenv('BEDROCK_AGENT_ID')
+        agent_alias = os.getenv('BEDROCK_AGENT_ALIAS')
+        knowledge_base_id = os.getenv('BEDROCK_KNOWLEDGE_BASE_ID')
+        nexus_content_base_uuid = os.getenv('NEXUS_CONTENT_BASE_UUID')
 
-        bedrock_agent_runtime = get_bedrock_client()
+        bedrock_agent_runtime = get_bedrock_runtime_client()
 
         single_filter = {
             "equals": {
                 "key": "contentBaseUuid",
-                "value": "8beca63a-1342-4702-bf85-7aea171488c3"
+                "value": nexus_content_base_uuid
             }
         }
 
@@ -99,15 +113,15 @@ def chat():
         }
 
         response = bedrock_agent_runtime.invoke_agent(
-            agentId='IW1ZYC0HAX',
-            agentAliasId='QDIBJT6CZ3',
+            agentId=agent_id,
+            agentAliasId=agent_alias,
             sessionId=session_id,
             inputText=input_text,
             enableTrace=True,
             sessionState={
                 'knowledgeBaseConfigurations': [
                     {
-                        'knowledgeBaseId': '4ZWOZCDBGV',
+                        'knowledgeBaseId': knowledge_base_id,
                         'retrievalConfiguration': retrieval_configuration
                     }
                 ]
@@ -162,7 +176,44 @@ def chat():
         })
 
     except Exception as e:
+        traceback.print_exc()
         logger.error(f"Error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/collaborators', methods=['GET'])
+def list_collaborators():
+    try:
+        bedrock_agent = get_bedrock_client()
+        
+        agent_id = os.getenv('BEDROCK_AGENT_ID')
+        agent_version = os.getenv('BEDROCK_AGENT_VERSION')
+
+        response = bedrock_agent.list_agent_collaborators(
+            agentId=agent_id,
+            agentVersion=agent_version
+        )
+        
+        collaborators = []
+        for collaborator in response.get('agentCollaboratorSummaries', []):
+            collaborators.append({
+                'id': collaborator.get('agentId'),
+                'name': collaborator.get('collaboratorName'),
+                'description': collaborator.get('collaborationInstruction'),
+                'type': 'COLLABORATOR'
+            })
+
+        print(f"List Collaborators Response: {collaborators}")
+        
+        return jsonify({
+            'collaborators': collaborators,
+            'manager': {
+                'name': 'Manager',
+                'description': 'Coordinate the team',
+                'type': 'MANAGER'
+            }
+        })
+    except Exception as e:
+        logger.error(f"Error listing collaborators: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':

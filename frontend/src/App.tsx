@@ -7,6 +7,7 @@ import { sendChatMessage } from './services/api';
 import type { Message, Trace } from './types';
 import { AgentGrid } from './components/AgentGrid';
 import { BotResponse } from './components/BotResponse';
+import { OrchestrationView } from './components/OrchestrationView';
 import { Sparkles } from 'lucide-react';
 
 function App() {
@@ -16,6 +17,7 @@ function App() {
   const [expandedTraces, setExpandedTraces] = useState<Set<number>>(new Set());
   const [isLoading, setIsLoading] = useState(false);
   const [showAgentGrid, setShowAgentGrid] = useState(false);
+  const [activeTab, setActiveTab] = useState('orchestration');
 
   // Generate a session ID based on the current timestamp
   const sessionId = Date.now().toString();
@@ -129,8 +131,8 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
-      <div className="container mx-auto px-4 py-12">
-        <div className="max-w-4xl mx-auto space-y-8">
+      <div className="container mx-auto px-8 py-12">
+        <div className="max-w-[1400px] mx-auto space-y-12">
           <div className="text-center space-y-2">
             <div className="flex items-center justify-center gap-2">
               <Sparkles className="w-8 h-8 text-indigo-500" />
@@ -155,8 +157,8 @@ function App() {
             </motion.div>
           )}
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <div className="h-[400px]">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+            <div className="h-[700px]">
               <Chat 
                 messages={messages} 
                 onSendMessage={handleSendMessage} 
@@ -164,17 +166,51 @@ function App() {
               />
             </div>
             
-            <div className="h-[400px] overflow-y-auto bg-white rounded-lg shadow-md p-6">
-              <h2 className="text-xl font-semibold mb-6">Processing Steps</h2>
-              {traces.map((trace, index) => (
-                <BotResponse
-                  key={index}
-                  message={trace.summary}
-                  type={trace.type}
-                  isActive={index === traces.length - 1}
-                  fullTrace={trace}
-                />
-              ))}
+            <div className="h-[700px] overflow-y-auto bg-white rounded-lg shadow-md p-8">
+              <div className="flex flex-col h-full">
+                <div className="flex space-x-4 mb-6">
+                  <button
+                    className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                      activeTab === 'orchestration'
+                        ? 'bg-indigo-100 text-indigo-700'
+                        : 'text-gray-500 hover:text-gray-700'
+                    }`}
+                    onClick={() => setActiveTab('orchestration')}
+                  >
+                    Orchestration
+                  </button>
+                  <button
+                    className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                      activeTab === 'logs'
+                        ? 'bg-indigo-100 text-indigo-700'
+                        : 'text-gray-500 hover:text-gray-700'
+                    }`}
+                    onClick={() => setActiveTab('logs')}
+                  >
+                    Logs
+                  </button>
+                </div>
+                
+                <div className="flex-1 overflow-y-auto">
+                  {activeTab === 'orchestration' ? (
+                    <div className="h-full">
+                      <OrchestrationView traces={traces} />
+                    </div>
+                  ) : (
+                    <div>
+                      {traces.map((trace, index) => (
+                        <BotResponse
+                          key={index}
+                          message={trace.summary}
+                          type={trace.type}
+                          isActive={index === traces.length - 1}
+                          fullTrace={trace}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         </div>
