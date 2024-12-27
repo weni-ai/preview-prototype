@@ -68,7 +68,7 @@ def get_trace_summary(trace):
         
         {json.dumps(trace, indent=2)}
         
-        Provide a one-line summary that captures the key action or decision being made.
+        Provide a one-line summary with maximum of 5 words that captures the key action or decision being made.
         Do not mention what the architectured or models behind each step, consider it as confidential, consider the text will be demonstrated to possible competitors.
         """
 
@@ -187,6 +187,7 @@ def list_collaborators():
         
         agent_id = os.getenv('BEDROCK_AGENT_ID')
         agent_version = os.getenv('BEDROCK_AGENT_VERSION')
+        agent_alias = os.getenv('BEDROCK_AGENT_ALIAS')
 
         response = bedrock_agent.list_agent_collaborators(
             agentId=agent_id,
@@ -196,7 +197,7 @@ def list_collaborators():
         collaborators = []
         for collaborator in response.get('agentCollaboratorSummaries', []):
             collaborators.append({
-                'id': collaborator.get('agentId'),
+                'id': collaborator.get('agentDescriptor').get("aliasArn"),
                 'name': collaborator.get('collaboratorName'),
                 'description': collaborator.get('collaborationInstruction'),
                 'type': 'COLLABORATOR'
@@ -207,6 +208,7 @@ def list_collaborators():
         return jsonify({
             'collaborators': collaborators,
             'manager': {
+                'id': f"arn:aws:bedrock:us-east-1:005047304657:agent-alias/{agent_id}/{agent_alias}",
                 'name': 'Manager',
                 'description': 'Coordinate the team',
                 'type': 'MANAGER'

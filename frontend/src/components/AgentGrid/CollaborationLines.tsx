@@ -1,10 +1,17 @@
 import React from 'react';
 
 interface CollaborationLinesProps {
-  activeAgent: number;
+  agents: Array<{
+    id: string;
+    name: string;
+    role: string;
+    avatar?: string;
+    isThinking?: boolean;
+  }>;
+  activeAgent?: number;
 }
 
-export function CollaborationLines({ activeAgent }: CollaborationLinesProps) {
+export function CollaborationLines({ agents, activeAgent = -1 }: CollaborationLinesProps) {
   return (
     <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 0 }}>
       <defs>

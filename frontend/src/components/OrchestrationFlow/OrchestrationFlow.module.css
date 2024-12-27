@@ -1,0 +1,194 @@
+.container {
+  width: 100%;
+  padding: 2rem;
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(10px);
+  border-radius: 1rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+}
+
+.agentsFlow {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2rem;
+  padding: 1rem;
+}
+
+.managerCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 400px;
+  padding: 1.5rem;
+  background: white;
+  border-radius: 1rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.collaboratorsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+  width: 100%;
+  position: relative;
+}
+
+.collaboratorCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1rem;
+  background: white;
+  border-radius: 1rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.collaboratorCard .iconContainer {
+  width: 48px;
+  height: 48px;
+  margin-bottom: 0.75rem;
+}
+
+.collaboratorCard .agentName {
+  font-size: 1rem;
+}
+
+.collaboratorCard .agentDescription {
+  font-size: 0.75rem;
+}
+
+.collaboratorCard .summaryContainer {
+  padding: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.collaboratorCard .agentSummary {
+  font-size: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.iconContainer {
+  width: 64px;
+  height: 64px;
+  border-radius: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1rem;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.pulseRing {
+  position: absolute;
+  inset: -4px;
+  border: 2px solid currentColor;
+  border-radius: 1rem;
+}
+
+.agentInfo {
+  text-align: center;
+  width: 100%;
+}
+
+.agentName {
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 0.5rem;
+  font-size: 1.1rem;
+}
+
+.agentDescription {
+  font-size: 0.875rem;
+  color: #666;
+  margin-bottom: 1rem;
+}
+
+.summaryContainer {
+  background: rgba(59, 130, 246, 0.05);
+  border-radius: 0.75rem;
+  padding: 1rem;
+  margin-top: 1rem;
+  overflow: hidden;
+}
+
+.agentSummary {
+  font-size: 0.875rem;
+  color: #666;
+  line-height: 1.4;
+  margin-bottom: 1rem;
+}
+
+.statusIndicator {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  justify-content: center;
+  padding: 0.5rem;
+  background: rgba(59, 130, 246, 0.1);
+  border-radius: 9999px;
+  width: fit-content;
+  margin: 0 auto;
+}
+
+.connector {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  position: relative;
+  margin: 0.5rem 0;
+}
+
+.connector::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: currentColor;
+  transform: translateX(-50%);
+  opacity: 0.2;
+}
+
+.connector svg {
+  transform: rotate(90deg);
+}
+
+.verticalConnector {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  position: relative;
+  margin: 0.5rem 0;
+}
+
+.verticalConnector::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: currentColor;
+  transform: translateX(-50%);
+  opacity: 0.2;
+}
+
+.verticalConnector svg {
+  transform: rotate(90deg);
+}
+
+@media (max-width: 768px) {
+  .collaboratorsGrid {
+    grid-template-columns: 1fr;
+  }
+} 

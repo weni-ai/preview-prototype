@@ -9,6 +9,7 @@ import { AgentGrid } from './components/AgentGrid';
 import { BotResponse } from './components/BotResponse';
 import { OrchestrationView } from './components/OrchestrationView';
 import { Sparkles } from 'lucide-react';
+import { OrchestrationFlow } from './components/OrchestrationFlow';
 
 function App() {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -16,8 +17,7 @@ function App() {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [expandedTraces, setExpandedTraces] = useState<Set<number>>(new Set());
   const [isLoading, setIsLoading] = useState(false);
-  const [showAgentGrid, setShowAgentGrid] = useState(false);
-  const [activeTab, setActiveTab] = useState('orchestration');
+  const [collaborators, setCollaborators] = useState<any[]>([]);
 
   // Generate a session ID based on the current timestamp
   const sessionId = Date.now().toString();
@@ -25,12 +25,26 @@ function App() {
   // Get the backend URL from environment variables, with a fallback
   const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://127.0.0.1:5000';
 
+  // Fetch collaborators on mount
+  useEffect(() => {
+    fetch(`${BACKEND_URL}/api/collaborators`)
+      .then(response => response.json())
+      .then(data => {
+        const allCollaborators = [
+          data.manager,
+          ...data.collaborators.sort((a: any, b: any) => a.name.localeCompare(b.name))
+        ];
+        setCollaborators(allCollaborators);
+      })
+      .catch(error => console.error('Error fetching collaborators:', error));
+  }, [BACKEND_URL]);
+
   useEffect(() => {
     const newSocket = io(BACKEND_URL, {
       transports: ['websocket', 'polling'],
-      cors: {
-        origin: "http://localhost:3000",
-        credentials: true
+      withCredentials: true,
+      extraHeaders: {
+        'Access-Control-Allow-Origin': 'http://localhost:3000'
       }
     });
 
@@ -144,71 +158,42 @@ function App() {
             <p className="text-gray-600">Collaborative AI agents working together</p>
           </div>
 
-          {showAgentGrid && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="relative h-[400px]"
-            >
-              <AgentGrid 
-                traces={traces}
-                activeAgent={isLoading ? traces.length : -1}
-              />
-            </motion.div>
-          )}
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-            <div className="h-[700px]">
-              <Chat 
-                messages={messages} 
-                onSendMessage={handleSendMessage} 
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="bg-white rounded-xl shadow-sm p-6">
+              <Chat
+                messages={messages}
+                onSendMessage={handleSendMessage}
                 isLoading={isLoading}
               />
             </div>
-            
-            <div className="h-[700px] overflow-y-auto bg-white rounded-lg shadow-md p-8">
-              <div className="flex flex-col h-full">
-                <div className="flex space-x-4 mb-6">
-                  <button
-                    className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                      activeTab === 'orchestration'
-                        ? 'bg-indigo-100 text-indigo-700'
-                        : 'text-gray-500 hover:text-gray-700'
-                    }`}
-                    onClick={() => setActiveTab('orchestration')}
-                  >
-                    Orchestration
-                  </button>
-                  <button
-                    className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                      activeTab === 'logs'
-                        ? 'bg-indigo-100 text-indigo-700'
-                        : 'text-gray-500 hover:text-gray-700'
-                    }`}
-                    onClick={() => setActiveTab('logs')}
-                  >
-                    Logs
-                  </button>
-                </div>
-                
-                <div className="flex-1 overflow-y-auto">
-                  {activeTab === 'orchestration' ? (
-                    <div className="h-full">
-                      <OrchestrationView traces={traces} />
-                    </div>
-                  ) : (
-                    <div>
-                      {traces.map((trace, index) => (
-                        <BotResponse
-                          key={index}
-                          message={trace.summary}
-                          type={trace.type}
-                          isActive={index === traces.length - 1}
-                          fullTrace={trace}
-                        />
-                      ))}
-                    </div>
-                  )}
+            <div className="space-y-4">
+              <div className="bg-white rounded-xl shadow-sm">
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="relative"
+                >
+                  <OrchestrationFlow 
+                    traces={traces} 
+                    collaborators={collaborators}
+                  />
+                </motion.div>
+                <div className="max-h-[600px] overflow-y-auto p-4">
+                  {traces.map((trace, index) => (
+                    <AgentNode
+                      key={index}
+                      type={trace.type === 'PRE_PROCESSING' ? 'Pre-processing' :
+                           trace.type === 'ORCHESTRATION' ? 'Orchestration' :
+                           trace.type === 'POST_PROCESSING' ? 'Post-processing' :
+                           trace.type === 'error' ? 'Error' : 'Processing'}
+                      status={index === traces.length - 1 ? 'active' : 'completed'}
+                      summary={trace.summary || 'Processing...'}
+                      details={trace}
+                      isExpanded={expandedTraces.has(index)}
+                      onToggle={() => toggleTrace(index)}
+                      onCopy={() => copyTrace(trace)}
+                    />
+                  ))}
                 </div>
               </div>
             </div>

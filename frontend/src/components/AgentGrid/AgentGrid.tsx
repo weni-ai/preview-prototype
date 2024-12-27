@@ -3,9 +3,12 @@ import { motion } from 'framer-motion';
 import { Agent } from '../Agent';
 import { CollaborationLines } from './CollaborationLines';
 import styles from './AgentGrid.module.css';
+import type { Trace } from '../../types';
 
 interface AgentGridProps {
-  agents: Array<{
+  traces: Trace[];
+  activeAgent: number;
+  agents?: Array<{
     id: string;
     name: string;
     role: string;
@@ -15,7 +18,7 @@ interface AgentGridProps {
   onAgentClick?: (agentId: string) => void;
 }
 
-export const AgentGrid: React.FC<AgentGridProps> = ({ agents, onAgentClick }) => {
+export const AgentGrid: React.FC<AgentGridProps> = ({ agents = [], traces, activeAgent, onAgentClick }) => {
   return (
     <motion.div 
       className={styles.gridContainer}
