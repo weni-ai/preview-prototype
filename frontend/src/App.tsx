@@ -18,6 +18,7 @@ function App() {
   const [expandedTraces, setExpandedTraces] = useState<Set<number>>(new Set());
   const [isLoading, setIsLoading] = useState(false);
   const [collaborators, setCollaborators] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState<'visual' | 'logs'>('visual');
 
   // Generate a session ID based on the current timestamp
   const sessionId = Date.now().toString();
@@ -168,33 +169,58 @@ function App() {
             </div>
             <div className="space-y-4">
               <div className="bg-white rounded-xl shadow-sm">
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="relative"
-                >
-                  <OrchestrationFlow 
-                    traces={traces} 
-                    collaborators={collaborators}
-                  />
-                </motion.div>
-                <div className="max-h-[600px] overflow-y-auto p-4">
-                  {traces.map((trace, index) => (
-                    <AgentNode
-                      key={index}
-                      type={trace.type === 'PRE_PROCESSING' ? 'Pre-processing' :
-                           trace.type === 'ORCHESTRATION' ? 'Orchestration' :
-                           trace.type === 'POST_PROCESSING' ? 'Post-processing' :
-                           trace.type === 'error' ? 'Error' : 'Processing'}
-                      status={index === traces.length - 1 ? 'active' : 'completed'}
-                      summary={trace.summary || 'Processing...'}
-                      details={trace}
-                      isExpanded={expandedTraces.has(index)}
-                      onToggle={() => toggleTrace(index)}
-                      onCopy={() => copyTrace(trace)}
-                    />
-                  ))}
+                <div className="flex border-b">
+                  <button
+                    className={`px-4 py-2 ${
+                      activeTab === 'visual'
+                        ? 'border-b-2 border-blue-500 text-blue-500'
+                        : 'text-gray-600'
+                    }`}
+                    onClick={() => setActiveTab('visual')}
+                  >
+                    Visual Flow
+                  </button>
+                  <button
+                    className={`px-4 py-2 ${
+                      activeTab === 'logs'
+                        ? 'border-b-2 border-blue-500 text-blue-500'
+                        : 'text-gray-600'
+                    }`}
+                    onClick={() => setActiveTab('logs')}
+                  >
+                    Logs
+                  </button>
                 </div>
+                {activeTab === 'visual' ? (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="relative"
+                  >
+                    <OrchestrationFlow 
+                      traces={traces} 
+                      collaborators={collaborators}
+                    />
+                  </motion.div>
+                ) : (
+                  <div className="max-h-[600px] overflow-y-auto p-4">
+                    {traces.map((trace, index) => (
+                      <AgentNode
+                        key={index}
+                        type={trace.type === 'PRE_PROCESSING' ? 'Pre-processing' :
+                             trace.type === 'ORCHESTRATION' ? 'Orchestration' :
+                             trace.type === 'POST_PROCESSING' ? 'Post-processing' :
+                             trace.type === 'error' ? 'Error' : 'Processing'}
+                        status={index === traces.length - 1 ? 'active' : 'completed'}
+                        summary={trace.summary || 'Processing...'}
+                        details={trace}
+                        isExpanded={expandedTraces.has(index)}
+                        onToggle={() => toggleTrace(index)}
+                        onCopy={() => copyTrace(trace)}
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>

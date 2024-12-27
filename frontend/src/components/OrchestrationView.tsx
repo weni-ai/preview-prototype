@@ -26,6 +26,7 @@ export function OrchestrationView({ traces }: OrchestrationViewProps) {
   const [error, setError] = useState<string | null>(null);
   const [activeAgent, setActiveAgent] = useState<string | null>(null);
   const [activeTrace, setActiveTrace] = useState<any | null>(null);
+  const [activeTab, setActiveTab] = useState<'visual' | 'logs'>('visual');
 
   useEffect(() => {
     const fetchCollaborators = async () => {
@@ -135,82 +136,53 @@ export function OrchestrationView({ traces }: OrchestrationViewProps) {
     );
   };
 
-  if (loading) {
-    return <div className="flex items-center justify-center h-full">Loading...</div>;
-  }
-
-  if (error) {
-    return <div className="text-red-500">Error: {error}</div>;
-  }
-
   return (
-    <div className="flex flex-col items-center h-full pt-8 relative">
-      {manager && (
-        <motion.div 
-          className="mb-20 relative"
-          animate={{
-            scale: activeAgent === 'manager' ? 1.05 : 1,
-          }}
-          transition={{ duration: 0.3 }}
+    <div className="flex flex-col w-full h-full">
+      <div className="flex border-b mb-4">
+        <button
+          className={`px-4 py-2 ${
+            activeTab === 'visual'
+              ? 'border-b-2 border-blue-500 text-blue-500'
+              : 'text-gray-600'
+          }`}
+          onClick={() => setActiveTab('visual')}
         >
-          <div className="flex flex-col items-center">
-            <div className={`w-24 h-24 rounded-2xl bg-purple-500 flex items-center justify-center mb-4 shadow-lg relative`}>
-              {getIconForType('MANAGER')}
-              {activeAgent === 'manager' && (
-                <motion.div
-                  className="absolute inset-0 rounded-2xl border-2 border-indigo-400"
-                  animate={{ scale: [1, 1.1, 1] }}
-                  transition={{ duration: 1.5, repeat: Infinity }}
-                />
-              )}
-            </div>
-            <h3 className="text-2xl font-semibold">{manager.name}</h3>
-            <p className="text-base text-gray-500 mt-2">{manager.description}</p>
-          </div>
-          {collaborators.length > 0 && (
-            <div className="absolute w-px h-20 bg-gray-200 left-1/2 -bottom-20 transform -translate-x-1/2" />
-          )}
-        </motion.div>
-      )}
+          Visual Flow
+        </button>
+        <button
+          className={`px-4 py-2 ${
+            activeTab === 'logs'
+              ? 'border-b-2 border-blue-500 text-blue-500'
+              : 'text-gray-600'
+          }`}
+          onClick={() => setActiveTab('logs')}
+        >
+          Logs
+        </button>
+      </div>
 
-      {collaborators.length > 0 && (
-        <div className="w-full px-4">
-          <div className="relative grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-12 gap-y-16">
-            <div className="absolute left-1/2 -translate-x-1/2 -top-8 w-full h-px">
-              <div className="w-[80%] h-px bg-gray-200 mx-auto" />
+      {activeTab === 'visual' ? (
+        <div className="flex-1">
+          {loading && <div>Loading...</div>}
+          {error && <div>Error: {error}</div>}
+          {!loading && !error && (
+            <div className="flex flex-col items-center space-y-8">
+              {renderTraceAnimation()}
+              {renderActiveMessage()}
             </div>
-            {collaborators.map((collaborator) => (
-              <motion.div
-                key={collaborator.id}
-                className="flex flex-col items-center relative"
-                animate={{
-                  scale: activeAgent === collaborator.name ? 1.05 : 1,
-                }}
-                transition={{ duration: 0.3 }}
-              >
-                <div className="absolute left-1/2 -translate-x-1/2 -top-8 w-px h-8 bg-gray-200" />
-                <div className={`w-20 h-20 rounded-2xl bg-gray-400 flex items-center justify-center mb-4 shadow-md relative`}>
-                  {getIconForType(collaborator.type)}
-                  {activeAgent === collaborator.name && (
-                    <motion.div
-                      className="absolute inset-0 rounded-2xl border-2 border-indigo-400"
-                      animate={{ scale: [1, 1.1, 1] }}
-                      transition={{ duration: 1.5, repeat: Infinity }}
-                    />
-                  )}
-                </div>
-                <h3 className="text-lg font-semibold text-center">{collaborator.name}</h3>
-                <p className="text-sm text-gray-500 text-center mt-2 max-w-[220px] leading-relaxed">
-                  {collaborator.description}
-                </p>
-              </motion.div>
+          )}
+        </div>
+      ) : (
+        <div className="flex-1 overflow-auto p-4 bg-gray-50 rounded">
+          <pre className="whitespace-pre-wrap">
+            {traces.map((trace, index) => (
+              <div key={index} className="mb-4 p-2 bg-white rounded shadow">
+                <code>{JSON.stringify(trace, null, 2)}</code>
+              </div>
             ))}
-          </div>
+          </pre>
         </div>
       )}
-
-      {renderTraceAnimation()}
-      {renderActiveMessage()}
     </div>
   );
 } 
