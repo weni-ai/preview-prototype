@@ -60,7 +60,7 @@ jobs:
             tag=${{env.TAG}}
             commit=${{env.COMMIT_SHA}}
             repository=${{env.IMAGE_SOURCE_URL}}
-          file: docker/Dockerfile
+          file: backend/Dockerfile
           push: true
           tags: "${{env.IMAGE_TAG}}"
           no-cache: true
@@ -130,4 +130,3 @@ jobs:
           directory: ./kubernetes-manifests/
           branch: main
           message: "From Preview Prototype Build (Push Tag ${{ env.MANIFESTS_ENVIRONMENT }})"
-          
