@@ -10,6 +10,7 @@ import traceback
 import time
 from tenacity import retry, stop_after_attempt, wait_exponential
 from openai import OpenAI
+from config import OPENAI_API_KEY
 
 load_dotenv()
 
