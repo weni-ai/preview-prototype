@@ -1,6 +1,6 @@
 # syntax = docker/dockerfile:1
 
-ARG PYTHON_VERSION="3.9"
+ARG PYTHON_VERSION="3.11"
 ARG DEBIAN_VERSION="buster"
 
 ARG BUILD_DEPS="\
