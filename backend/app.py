@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 import traceback
 import time
 from tenacity import retry, stop_after_attempt, wait_exponential
-# from openai import OpenAI
+from openai import OpenAI
 
 load_dotenv()
 
@@ -43,7 +43,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# client = OpenAI()
+app.config['OPENAI_API_KEY'] = os.getenv('OPENAI_API_KEY')
+client = OpenAI()
+client.api_key = app.config['OPENAI_API_KEY']
 
 def get_bedrock_client():
     session = boto3.Session(
