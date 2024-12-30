@@ -156,7 +156,7 @@ export function ProductDetail({ product, onClose }: ProductDetailProps) {
         className="p-4 border-t"
       >
         <motion.button 
-          className="w-full bg-[#00796B] text-white py-3 rounded-lg font-medium flex items-center justify-center gap-2"
+          className="w-full bg-gradient-to-r from-[#00DED2] to-[#00DED2]/80 text-white py-3 rounded-lg font-medium flex items-center justify-center gap-2"
           onClick={() => {/* Handle add to cart */}}
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
