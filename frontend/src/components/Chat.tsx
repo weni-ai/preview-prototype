@@ -1,6 +1,16 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send } from 'lucide-react';
 import type { Message } from '../types';
+import { CatalogPreview } from './CatalogPreview';
+import { ProductCatalog } from './ProductCatalog';
+
+interface Product {
+  id: string;
+  name: string;
+  description: string;
+  image: string;
+  price: number;
+}
 
 interface ChatProps {
   messages: Message[];
@@ -10,6 +20,8 @@ interface ChatProps {
 
 export function Chat({ messages, onSendMessage, isLoading }: ChatProps) {
   const [input, setInput] = useState('');
+  const [showCatalog, setShowCatalog] = useState(false);
+  const [currentCatalogProducts, setCurrentCatalogProducts] = useState<Product[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -28,6 +40,54 @@ export function Chat({ messages, onSendMessage, isLoading }: ChatProps) {
     }
   };
 
+  const parseProductCatalog = (text: string): Product[] | null => {
+    const match = text.match(/<ProductCatalog>(.*?)<\/ProductCatalog>/s);
+    if (match) {
+      try {
+        const jsonStr = match[1].trim();
+        return JSON.parse(jsonStr);
+      } catch (e) {
+        console.error('Failed to parse product catalog:', e);
+      }
+    }
+    return null;
+  };
+
+  const renderMessageContent = (message: Message) => {
+    const products = parseProductCatalog(message.text);
+    
+    if (products) {
+      const textBeforeCatalog = message.text.split('<ProductCatalog>')[0].trim();
+      return (
+        <div className="space-y-3">
+          {textBeforeCatalog && (
+            <p className="text-base leading-relaxed whitespace-pre-wrap">{textBeforeCatalog}</p>
+          )}
+          <CatalogPreview
+            products={products}
+            onViewCatalog={() => {
+              setCurrentCatalogProducts(products);
+              setShowCatalog(true);
+            }}
+          />
+        </div>
+      );
+    }
+
+    return <p className="text-base leading-relaxed whitespace-pre-wrap">{message.text}</p>;
+  };
+
+  if (showCatalog) {
+    return (
+      <div className="flex flex-col flex-1">
+        <ProductCatalog
+          products={currentCatalogProducts}
+          onClose={() => setShowCatalog(false)}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col flex-1">
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
@@ -43,7 +103,7 @@ export function Chat({ messages, onSendMessage, isLoading }: ChatProps) {
                   : 'bg-white border border-gray-100 shadow-sm text-gray-800'
               }`}
             >
-              <p className="text-base leading-relaxed whitespace-pre-wrap">{message.text}</p>
+              {renderMessageContent(message)}
             </div>
           </div>
         ))}
