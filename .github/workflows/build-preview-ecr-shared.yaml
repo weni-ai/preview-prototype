@@ -56,7 +56,7 @@ jobs:
       - name: Build and push - Preview Prototype Image
         uses: docker/build-push-action@v3
         with:
-          context: .
+          context: backend
           labels: |
             tag=${{env.TAG}}
             commit=${{env.COMMIT_SHA}}
