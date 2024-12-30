@@ -242,6 +242,13 @@ def list_collaborators():
         logger.error(f"Error listing collaborators: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/healthcheck', methods=['GET'])
+def health_check():
+    return jsonify({
+        'status': 'healthy',
+        'timestamp': time.time()
+    })
+
 if __name__ == '__main__':
     # app.run(port=5000, debug=True)
     socketio.run(app, port=5000, debug=True) 
