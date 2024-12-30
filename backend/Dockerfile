@@ -31,8 +31,11 @@ ENV PYTHONUNBUFFERED=1 \
 ARG COMPRESS_ENABLED
 ARG BRANDING_ENABLED
 
+# Create app user and ensure proper permissions
 RUN addgroup --gid 1999 "${PROJECT_GROUP}" \
-  && useradd --system -m -d "${PROJECT_PATH}" -u 1999 -g 1999 "${PROJECT_USER}"
+  && useradd --system -m -d "${PROJECT_PATH}" -u 1999 -g 1999 "${PROJECT_USER}" \
+  && mkdir -p "${PROJECT_PATH}" \
+  && chown -R "${PROJECT_USER}:${PROJECT_GROUP}" "${PROJECT_PATH}"
 
 WORKDIR "${PROJECT_PATH}"
 
@@ -66,7 +69,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 COPY --from=build /install /usr/local
 COPY --chown=${PROJECT_USER}:${PROJECT_GROUP} . ${PROJECT_PATH}
 
-USER "${PROJECT_USER}:${PROJECT_GROUP}"
+# Don't switch user in Dockerfile - let start script handle it
 EXPOSE 5000
 ENTRYPOINT ["bash", "start"]
 CMD ["start"]
