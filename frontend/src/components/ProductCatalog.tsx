@@ -3,6 +3,7 @@ import { ChevronLeft, ShoppingCart, Plus, Minus } from 'lucide-react';
 import { formatBRL } from '../utils/currency';
 import { ProductDetail } from './ProductDetail';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useCart } from '../contexts/CartContext';
 
 interface Product {
   id: string;
@@ -16,19 +17,36 @@ interface Product {
 interface ProductCatalogProps {
   products: Product[];
   onClose: () => void;
+  onViewCart: () => void;
 }
 
-export function ProductCatalog({ products, onClose }: ProductCatalogProps) {
-  const [selectedQuantities, setSelectedQuantities] = React.useState<Record<string, number>>({});
+export function ProductCatalog({ products, onClose, onViewCart }: ProductCatalogProps) {
   const [selectedProduct, setSelectedProduct] = React.useState<Product | null>(null);
+  const { items, addItem, updateQuantity: updateCartQuantity } = useCart();
 
-  const updateQuantity = (productId: string, delta: number) => {
-    setSelectedQuantities(prev => {
-      const current = prev[productId] || 0;
-      const newQuantity = Math.max(0, current + delta);
-      return { ...prev, [productId]: newQuantity };
-    });
+  const getProductQuantity = (productId: string) => {
+    const cartItem = items.find(item => item.id === productId);
+    return cartItem?.quantity || 0;
   };
+
+  const handleQuantityChange = (product: Product, delta: number) => {
+    const currentQuantity = getProductQuantity(product.id);
+    const newQuantity = Math.max(0, currentQuantity + delta);
+
+    if (newQuantity === 0) {
+      updateCartQuantity(product.id, 0);
+    } else if (currentQuantity === 0 && delta > 0) {
+      addItem({
+        ...product,
+        quantity: 1,
+        product_retailer_id: product.id
+      });
+    } else {
+      updateCartQuantity(product.id, newQuantity);
+    }
+  };
+
+  const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
     <AnimatePresence mode="wait">
@@ -37,6 +55,15 @@ export function ProductCatalog({ products, onClose }: ProductCatalogProps) {
           key="product-detail"
           product={selectedProduct}
           onClose={() => setSelectedProduct(null)}
+          onAddToCart={(quantity) => {
+            addItem({
+              ...selectedProduct,
+              quantity,
+              product_retailer_id: selectedProduct.id
+            });
+            setSelectedProduct(null);
+          }}
+          initialQuantity={getProductQuantity(selectedProduct.id)}
         />
       ) : (
         <motion.div
@@ -56,9 +83,14 @@ export function ProductCatalog({ products, onClose }: ProductCatalogProps) {
               <h1 className="text-lg font-semibold">Product Catalog</h1>
               <p className="text-sm opacity-90">Browse our products</p>
             </div>
-            <div className="ml-auto">
+            <button onClick={onViewCart} className="ml-auto relative">
               <ShoppingCart className="w-6 h-6" />
-            </div>
+              {totalItems > 0 && (
+                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                  {totalItems}
+                </span>
+              )}
+            </button>
           </div>
 
           {/* Product List */}
@@ -102,24 +134,19 @@ export function ProductCatalog({ products, onClose }: ProductCatalogProps) {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ delay: 0.2 }}
+                  onClick={(e) => e.stopPropagation()}
                 >
                   <motion.button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      updateQuantity(product.id, -1);
-                    }}
+                    onClick={() => handleQuantityChange(product, -1)}
                     className="p-1 rounded-full hover:bg-gray-100"
-                    disabled={!selectedQuantities[product.id]}
+                    disabled={!getProductQuantity(product.id)}
                     whileTap={{ scale: 0.9 }}
                   >
                     <Minus className="w-5 h-5" />
                   </motion.button>
-                  <span className="w-8 text-center">{selectedQuantities[product.id] || 0}</span>
+                  <span className="w-8 text-center">{getProductQuantity(product.id)}</span>
                   <motion.button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      updateQuantity(product.id, 1);
-                    }}
+                    onClick={() => handleQuantityChange(product, 1)}
                     className="p-1 rounded-full hover:bg-gray-100"
                     whileTap={{ scale: 0.9 }}
                   >
@@ -132,7 +159,7 @@ export function ProductCatalog({ products, onClose }: ProductCatalogProps) {
 
           {/* View Cart Button */}
           <AnimatePresence>
-            {Object.values(selectedQuantities).some(q => q > 0) && (
+            {totalItems > 0 && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -140,6 +167,7 @@ export function ProductCatalog({ products, onClose }: ProductCatalogProps) {
                 className="p-4 border-t"
               >
                 <motion.button
+                  onClick={onViewCart}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   className="w-full bg-gradient-to-r from-[#00DED2] to-[#00DED2]/80 text-white py-3 rounded-lg font-medium"
