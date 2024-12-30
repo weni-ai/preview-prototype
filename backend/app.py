@@ -11,7 +11,8 @@ import time
 from tenacity import retry, stop_after_attempt, wait_exponential
 from openai import OpenAI
 
-load_dotenv()
+# Only load .env file if it exists and don't override existing env vars
+load_dotenv(override=False)
 
 app = Flask(__name__)
 
