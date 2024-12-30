@@ -1,6 +1,6 @@
 # syntax = docker/dockerfile:1
 
-ARG PYTHON_VERSION="3.9"
+ARG PYTHON_VERSION="3.11"
 ARG DEBIAN_VERSION="buster"
 
 ARG BUILD_DEPS="\
@@ -22,7 +22,7 @@ ENV PYTHONUNBUFFERED=1 \
   PROJECT_GROUP=app_group \
   PIP_DISABLE_PIP_VERSION_CHECK=1 \
   PATH="/install/bin:${PATH}" \
-  APP_PORT=8000 \
+  APP_PORT=5000 \
   APPLICATION_NAME="preview-prototype" \
   RUNTIME_DEPS=${RUNTIME_DEPS} \
   BUILD_DEPS=${BUILD_DEPS} \
@@ -67,6 +67,6 @@ COPY --from=build /install /usr/local
 COPY --chown=${PROJECT_USER}:${PROJECT_GROUP} . ${PROJECT_PATH}
 
 USER "${PROJECT_USER}:${PROJECT_GROUP}"
-EXPOSE 8000
+EXPOSE 5000
 ENTRYPOINT ["bash", "start"]
 CMD ["start"]

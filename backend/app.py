@@ -44,7 +44,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+app.config['OPENAI_API_KEY'] = os.getenv('OPENAI_API_KEY')
 client = OpenAI()
+client.api_key = app.config['OPENAI_API_KEY']
 
 def get_bedrock_client():
     session = boto3.Session(
