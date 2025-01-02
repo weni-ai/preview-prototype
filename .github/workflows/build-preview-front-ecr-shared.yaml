@@ -13,10 +13,10 @@ jobs:
       - name: Set variables
         run: |
             TAG="$( echo "${GITHUB_REF}" | cut -d'/' -f3 )"
-            if grep -qs -e '^.*.*-front-staging' <<< "${TAG}" ; then
+            if grep -qs -e '^.*.*-front-staging$' <<< "${TAG}" ; then
               echo "Found environment: STAGING - ${TAG}"
               echo "MANIFESTS_ENVIRONMENT=staging" | tee -a "${GITHUB_ENV}"
-            elif grep -qs -e '^.*.*-front' <<< "${TAG}" ; then
+            elif grep -qs -e '^.*.*-front$' <<< "${TAG}" ; then
               echo "No environment found, assuming: PRODUCTION - ${TAG}"
               echo "MANIFESTS_ENVIRONMENT=production" | tee -a "${GITHUB_ENV}"
             else
@@ -27,7 +27,7 @@ jobs:
             VERSION="${TAG}"
             echo "VERSION=${VERSION}" | tee -a "${GITHUB_ENV}"
             echo "COMMIT_SHA=$GITHUB_SHA" | tee -a "${GITHUB_ENV}"
-            echo "IMAGE_TAG=${{ secrets.ECR }}/tmp:preview-front-${TAG}" | tee -a "${GITHUB_ENV}"
+            echo "IMAGE_TAG=${{ secrets.ECR }}/tmp:preview-${TAG}" | tee -a "${GITHUB_ENV}"
             echo "IMAGE_SOURCE_URL=https://github.com/weni-ai/preview-prototype" | tee -a "${GITHUB_ENV}"
             echo "MANIFESTS_REPOSITORY=weni-ai/kubernetes-manifests-artificial-intelligence" | tee -a "${GITHUB_ENV}"
             echo "MANIFESTS_APPLICATION=multiagent-preview-front" | tee -a "${GITHUB_ENV}"
