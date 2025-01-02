@@ -4,11 +4,11 @@ WORKDIR /app
 
 RUN apk add --no-cache git
 
-COPY frontend/package.json frontend/package-lock.json ./
+COPY package.json package-lock.json ./
 
 RUN --mount=type=cache,target=/root/.npm NPM_CONFIG_CACHE=/root/.npm npm install
 
-COPY frontend/ ./
+COPY . ./
 
 RUN npm run build
 
