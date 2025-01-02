@@ -3,7 +3,7 @@ name: Build Preview Prototype in Shared (Push Tag)
 on:
   push:
     tags:
-      - '*.*.*-staging'
+      - '*.*.*-engine-staging'
       - '*.*.*'
 
 jobs:
@@ -13,10 +13,10 @@ jobs:
       - name: Set variables
         run: |
             TAG="$( echo "${GITHUB_REF}" | cut -d'/' -f3 )"
-            if grep -qs -e '^.*.*-staging' <<< "${TAG}" ; then
+            if grep -qs -e '^.*.*-engine-staging' <<< "${TAG}" ; then
               echo "Found environment: STAGING - ${TAG}"
               echo "MANIFESTS_ENVIRONMENT=staging" | tee -a "${GITHUB_ENV}"
-            elif grep -qs -e '^.*.*' <<< "${TAG}" ; then
+            elif grep -qs -e '^.*.*-engine' <<< "${TAG}" ; then
               echo "No environment found, assuming: PRODUCTION - ${TAG}"
               echo "MANIFESTS_ENVIRONMENT=production" | tee -a "${GITHUB_ENV}"
             else

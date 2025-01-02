@@ -14,7 +14,7 @@ RUN npm run build
 
 FROM nginxinc/nginx-unprivileged:1.25-alpine
 
-COPY --chown=nginx:nginx frontend/nginx.conf /etc/nginx/nginx.conf
+COPY --chown=nginx:nginx nginx.conf /etc/nginx/nginx.conf
 COPY --from=builder --chown=nginx:nginx /app/dist /usr/share/nginx/html/preview-prototype/
 COPY docker/docker-entrypoint.sh /
 RUN mv /usr/share/nginx/html/preview-prototype/index.html /usr/share/nginx/html/preview-prototype/index.html.tmpl \
