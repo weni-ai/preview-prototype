@@ -16,7 +16,7 @@ FROM nginxinc/nginx-unprivileged:1.25-alpine
 
 COPY --chown=nginx:nginx frontend/nginx.conf /etc/nginx/nginx.conf
 COPY --from=builder --chown=nginx:nginx /app/dist /usr/share/nginx/html/preview-prototype/
-COPY frontend/docker/docker-entrypoint.sh /
+COPY docker/docker-entrypoint.sh /
 RUN mv /usr/share/nginx/html/preview-prototype/index.html /usr/share/nginx/html/preview-prototype/index.html.tmpl \
     && cd /usr/share/nginx/html/preview-prototype/ \
     && ln -s /tmp/index.html
