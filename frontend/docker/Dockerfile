@@ -4,19 +4,19 @@ WORKDIR /app
 
 RUN apk add --no-cache git
 
-COPY package.json package-lock.json ./
+COPY frontend/package.json frontend/package-lock.json ./
 
 RUN --mount=type=cache,target=/root/.npm NPM_CONFIG_CACHE=/root/.npm npm install
 
-COPY . ./
+COPY frontend/ ./
 
 RUN npm run build
 
 FROM nginxinc/nginx-unprivileged:1.25-alpine
 
-COPY --chown=nginx:nginx nginx.conf /etc/nginx/nginx.conf
+COPY --chown=nginx:nginx frontend/nginx.conf /etc/nginx/nginx.conf
 COPY --from=builder --chown=nginx:nginx /app/dist /usr/share/nginx/html/preview-prototype/
-COPY docker/docker-entrypoint.sh /
+COPY frontend/docker/docker-entrypoint.sh /
 RUN mv /usr/share/nginx/html/preview-prototype/index.html /usr/share/nginx/html/preview-prototype/index.html.tmpl \
     && cd /usr/share/nginx/html/preview-prototype/ \
     && ln -s /tmp/index.html

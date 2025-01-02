@@ -27,7 +27,7 @@ jobs:
             VERSION="${TAG}"
             echo "VERSION=${VERSION}" | tee -a "${GITHUB_ENV}"
             echo "COMMIT_SHA=$GITHUB_SHA" | tee -a "${GITHUB_ENV}"
-            echo "IMAGE_TAG=${{ secrets.ECR }}/tmp:preview-engine-${TAG}" | tee -a "${GITHUB_ENV}"
+            echo "IMAGE_TAG=${{ secrets.ECR }}/tmp:preview-${TAG}" | tee -a "${GITHUB_ENV}"
             echo "IMAGE_SOURCE_URL=https://github.com/weni-ai/preview-prototype" | tee -a "${GITHUB_ENV}"
             echo "MANIFESTS_REPOSITORY=weni-ai/kubernetes-manifests-artificial-intelligence" | tee -a "${GITHUB_ENV}"
             echo "MANIFESTS_APPLICATION=multiagent-preview" | tee -a "${GITHUB_ENV}"
