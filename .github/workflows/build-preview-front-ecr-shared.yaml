@@ -1,10 +1,10 @@
-name: Build Preview Prototype in Shared (Push Tag)
+name: Build Preview Prototype (Frontend) in Shared (Push Tag)
 
 on:
   push:
     tags:
-      - 'engine-*.*.*-staging'
-      - 'engine-*.*.*'
+      - 'front-*.*.*-staging'
+      - 'front-*.*.*'
 
 jobs:
   docker:
@@ -13,10 +13,10 @@ jobs:
       - name: Set variables
         run: |
             TAG="$( echo "${GITHUB_REF}" | cut -d'/' -f3 )"
-            if grep -qs -e 'engine-*.*.*-staging' <<< "${TAG}" ; then
+            if grep -qs -e 'front-*.*.*-staging' <<< "${TAG}" ; then
               echo "Found environment: STAGING - ${TAG}"
               echo "MANIFESTS_ENVIRONMENT=staging" | tee -a "${GITHUB_ENV}"
-            elif grep -qs -e 'engine-*.*.*' <<< "${TAG}" ; then
+            elif grep -qs -e 'front-*.*.*' <<< "${TAG}" ; then
               echo "No environment found, assuming: PRODUCTION - ${TAG}"
               echo "MANIFESTS_ENVIRONMENT=production" | tee -a "${GITHUB_ENV}"
             else
@@ -30,7 +30,7 @@ jobs:
             echo "IMAGE_TAG=${{ secrets.ECR }}/tmp:preview-${TAG}" | tee -a "${GITHUB_ENV}"
             echo "IMAGE_SOURCE_URL=https://github.com/weni-ai/preview-prototype" | tee -a "${GITHUB_ENV}"
             echo "MANIFESTS_REPOSITORY=weni-ai/kubernetes-manifests-artificial-intelligence" | tee -a "${GITHUB_ENV}"
-            echo "MANIFESTS_APPLICATION=multiagent-preview" | tee -a "${GITHUB_ENV}"
+            echo "MANIFESTS_APPLICATION=multiagent-preview-front" | tee -a "${GITHUB_ENV}"
             echo "MANIFESTS_PATCH_TARGET=deployment.json" | tee -a "${GITHUB_ENV}"
 
       - name: Check out the repo
@@ -56,12 +56,12 @@ jobs:
       - name: Build and push - Preview Prototype Image
         uses: docker/build-push-action@v3
         with:
-          context: backend
+          context: frontend
           labels: |
             tag=${{env.TAG}}
             commit=${{env.COMMIT_SHA}}
             repository=${{env.IMAGE_SOURCE_URL}}
-          file: backend/Dockerfile
+          file: frontend/docker/Dockerfile.front
           push: true
           tags: "${{env.IMAGE_TAG}}"
           no-cache: true
