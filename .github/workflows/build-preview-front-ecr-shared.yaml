@@ -61,7 +61,7 @@ jobs:
             tag=${{env.TAG}}
             commit=${{env.COMMIT_SHA}}
             repository=${{env.IMAGE_SOURCE_URL}}
-          file: frontend/docker/Dockerfile
+          file: frontend/docker/Dockerfile.front
           push: true
           tags: "${{env.IMAGE_TAG}}"
           no-cache: true
