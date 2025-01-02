@@ -27,8 +27,8 @@ function App() {
     return `session_${timestamp}`;
   });
 
-  // Get the backend URL from environment variables, with a fallback
-  const BACKEND_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:5000';
+  // Get the backend URL from runtime configs, environment variables, or fallback
+  const BACKEND_URL = (window as any).configs?.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:5000';
 
   // Fetch collaborators on mount
   useEffect(() => {
