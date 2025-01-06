@@ -16,6 +16,9 @@ venv/
 instance/
 .webassets-cache
 
+# File uploads
+/backend/uploads/
+
 # React Frontend
 node_modules/
 /frontend/build

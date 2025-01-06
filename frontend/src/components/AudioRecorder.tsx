@@ -5,7 +5,7 @@ import { Mic, Square, Send, Trash2 } from 'lucide-react';
 const BACKEND_URL = (window as any).configs?.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:5000';
 
 interface AudioRecorderProps {
-  onAudioRecorded: (text: string) => void;
+  onAudioRecorded: (text: string, audioUrl: string) => void;
   isLoading: boolean;
 }
 
@@ -14,7 +14,7 @@ export function AudioRecorder({ onAudioRecorded, isLoading }: AudioRecorderProps
   const [recordingDuration, setRecordingDuration] = useState(0);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const timerRef = useRef<number | null>(null);
 
   const startRecording = async () => {
     try {
@@ -87,7 +87,7 @@ export function AudioRecorder({ onAudioRecorded, isLoading }: AudioRecorderProps
 
       const data = await response.json();
       if (data.status === 'success' && data.text) {
-        onAudioRecorded(data.text);
+        onAudioRecorded(data.text, `${BACKEND_URL}${data.audioUrl}`);
       } else {
         console.error('Transcription failed:', data.error);
       }

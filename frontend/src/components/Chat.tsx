@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send } from 'lucide-react';
+import { Send, Play, Pause } from 'lucide-react';
 import type { Message } from '../types';
 import { CatalogPreview } from './CatalogPreview';
 import { ProductCatalog } from './ProductCatalog';
@@ -24,6 +24,11 @@ interface ChatProps {
   isLoading: boolean;
 }
 
+interface AudioMessage {
+  text: string;
+  audioUrl: string;
+}
+
 export function Chat({ messages, onSendMessage, isLoading }: ChatProps) {
   const [input, setInput] = useState('');
   const [showCatalog, setShowCatalog] = useState(false);
@@ -32,6 +37,8 @@ export function Chat({ messages, onSendMessage, isLoading }: ChatProps) {
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [currentCatalogProducts, setCurrentCatalogProducts] = useState<Product[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [playingAudio, setPlayingAudio] = useState<string | null>(null);
+  const audioRefs = useRef<{ [key: string]: HTMLAudioElement }>({});
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -49,9 +56,30 @@ export function Chat({ messages, onSendMessage, isLoading }: ChatProps) {
     }
   };
 
-  const handleAudioRecorded = (text: string) => {
+  const handleAudioRecorded = (text: string, audioUrl: string) => {
     if (text.trim() && !isLoading) {
-      onSendMessage(text);
+      onSendMessage(JSON.stringify({
+        type: 'audio',
+        text,
+        audioUrl
+      }));
+    }
+  };
+
+  const toggleAudioPlayback = (audioUrl: string) => {
+    const audio = audioRefs.current[audioUrl];
+    if (!audio) return;
+
+    if (playingAudio === audioUrl) {
+      audio.pause();
+      setPlayingAudio(null);
+    } else {
+      // Pause any currently playing audio
+      if (playingAudio && audioRefs.current[playingAudio]) {
+        audioRefs.current[playingAudio].pause();
+      }
+      audio.play();
+      setPlayingAudio(audioUrl);
     }
   };
 
@@ -90,6 +118,41 @@ export function Chat({ messages, onSendMessage, isLoading }: ChatProps) {
   };
 
   const renderMessageContent = (message: Message) => {
+    try {
+      const content = JSON.parse(message.text);
+      if (content.type === 'audio') {
+        return (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => toggleAudioPlayback(content.audioUrl)}
+                className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
+              >
+                {playingAudio === content.audioUrl ? (
+                  <Pause className="w-4 h-4" />
+                ) : (
+                  <Play className="w-4 h-4" />
+                )}
+              </button>
+              <audio
+                ref={(el) => {
+                  if (el) {
+                    audioRefs.current[content.audioUrl] = el;
+                    el.onended = () => setPlayingAudio(null);
+                  }
+                }}
+                src={content.audioUrl}
+                preload="none"
+              />
+            </div>
+            <p className="text-sm opacity-90">{content.text}</p>
+          </div>
+        );
+      }
+    } catch (e) {
+      // Not an audio message, continue with normal message handling
+    }
+
     const products = parseProductCatalog(message.text);
     const order = parseOrderMessage(message.text);
     

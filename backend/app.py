@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from flask_socketio import SocketIO, emit, join_room, disconnect
 import boto3
@@ -10,6 +10,8 @@ import traceback
 import time
 from tenacity import retry, stop_after_attempt, wait_exponential
 from openai import OpenAI
+import uuid
+from werkzeug.utils import secure_filename
 
 # Only load .env file if it exists and don't override existing env vars
 load_dotenv(override=False)
@@ -45,6 +47,12 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 client = OpenAI()
+
+# Create uploads directory if it doesn't exist
+UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads')
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 def get_bedrock_client():
     session = boto3.Session(
@@ -257,24 +265,42 @@ def transcribe_audio():
 
         audio_file = request.files['audio']
         
-        # Create a temporary file to store the audio
-        temp_file = audio_file.read()
+        # Generate a unique filename
+        filename = f"{uuid.uuid4()}.webm"
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(filename))
         
-        # Transcribe the audio using OpenAI's Whisper model
-        response = client.audio.transcriptions.create(
-            model="whisper-1",
-            file=("audio.webm", temp_file, "audio/webm"),
-            response_format="text"
-        )
+        # Save the file
+        audio_file.save(filepath)
+        
+        # Read the file for transcription
+        with open(filepath, 'rb') as f:
+            # Transcribe the audio using OpenAI's Whisper model
+            response = client.audio.transcriptions.create(
+                model="whisper-1",
+                file=(filename, f, "audio/webm"),
+                response_format="text"
+            )
+        
+        # Generate the URL for the audio file
+        audio_url = f"/api/audio/{filename}"
         
         return jsonify({
             'status': 'success',
-            'text': response
+            'text': response,
+            'audioUrl': audio_url
         })
 
     except Exception as e:
         logger.error(f"Error transcribing audio: {str(e)}")
         return jsonify({'error': str(e)}), 500
+
+@app.route('/api/audio/<filename>')
+def serve_audio(filename):
+    try:
+        return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+    except Exception as e:
+        logger.error(f"Error serving audio file: {str(e)}")
+        return jsonify({'error': str(e)}), 404
 
 if __name__ == '__main__':
     # app.run(port=5000, debug=True)
