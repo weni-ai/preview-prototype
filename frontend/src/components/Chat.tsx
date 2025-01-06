@@ -278,11 +278,11 @@ export function Chat({ messages, onSendMessage, isLoading }: ChatProps) {
               <div ref={messagesEndRef} />
             </div>
 
-            <form onSubmit={handleSubmit} className="p-3 border-t bg-white rounded-b-xl">
+            <div className="p-3 border-t bg-white rounded-b-xl">
               <div className="flex gap-3 items-center">
                 <AudioRecorder onAudioRecorded={handleAudioRecorded} isLoading={isLoading} />
                 <ImageUploader onImageAnalyzed={handleImageAnalyzed} isLoading={isLoading} />
-                <div className="flex flex-1 gap-3">
+                <form onSubmit={handleSubmit} className="flex flex-1 gap-3">
                   <input
                     type="text"
                     value={input}
@@ -300,9 +300,9 @@ export function Chat({ messages, onSendMessage, isLoading }: ChatProps) {
                     <span>{isLoading ? 'Sending...' : 'Send'}</span>
                     <Send className="w-4 h-4" />
                   </button>
-                </div>
+                </form>
               </div>
-            </form>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
