@@ -10,6 +10,7 @@ interface OrderItem {
   currency: string;
   name: string;
   image: string;
+  sellerId: string;
 }
 
 interface OrderDetailsProps {

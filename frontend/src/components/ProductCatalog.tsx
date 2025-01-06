@@ -12,6 +12,7 @@ interface Product {
   image: string;
   price: number;
   originalPrice?: number;
+  sellerId: string;
 }
 
 interface ProductCatalogProps {
@@ -30,6 +31,7 @@ export function ProductCatalog({ products, onClose, onViewCart }: ProductCatalog
   };
 
   const handleQuantityChange = (product: Product, delta: number) => {
+    console.log('Product being added:', product);
     const currentQuantity = getProductQuantity(product.id);
     const newQuantity = Math.max(0, currentQuantity + delta);
 
@@ -39,7 +41,8 @@ export function ProductCatalog({ products, onClose, onViewCart }: ProductCatalog
       addItem({
         ...product,
         quantity: 1,
-        product_retailer_id: product.id
+        product_retailer_id: product.id,
+        sellerId: product.sellerId
       });
     } else {
       updateCartQuantity(product.id, newQuantity);
@@ -59,7 +62,8 @@ export function ProductCatalog({ products, onClose, onViewCart }: ProductCatalog
             addItem({
               ...selectedProduct,
               quantity,
-              product_retailer_id: selectedProduct.id
+              product_retailer_id: selectedProduct.id,
+              sellerId: "default"
             });
             setSelectedProduct(null);
           }}

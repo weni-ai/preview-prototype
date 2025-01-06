@@ -19,7 +19,8 @@ export function Cart({ onClose, onPlaceOrder }: CartProps) {
       item_price: item.price,
       currency: "BRL",
       name: item.name,
-      image: item.image
+      image: item.image,
+      sellerId: item.sellerId
     }));
     onPlaceOrder(orderItems);
     clearCart();

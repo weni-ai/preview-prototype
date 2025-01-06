@@ -8,6 +8,7 @@ interface CartItem {
   price: number;
   quantity: number;
   product_retailer_id: string;
+  sellerId: string;
 }
 
 interface CartContextType {
