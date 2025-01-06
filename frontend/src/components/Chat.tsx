@@ -8,6 +8,7 @@ import { Cart } from './Cart';
 import { OrderMessage } from './OrderMessage';
 import { OrderDetails } from './OrderDetails';
 import { motion, AnimatePresence } from 'framer-motion';
+import { AudioRecorder } from './AudioRecorder';
 
 interface Product {
   id: string;
@@ -45,6 +46,12 @@ export function Chat({ messages, onSendMessage, isLoading }: ChatProps) {
     if (input.trim() && !isLoading) {
       onSendMessage(input);
       setInput('');
+    }
+  };
+
+  const handleAudioRecorded = (text: string) => {
+    if (text.trim() && !isLoading) {
+      onSendMessage(text);
     }
   };
 
@@ -185,24 +192,27 @@ export function Chat({ messages, onSendMessage, isLoading }: ChatProps) {
             </div>
 
             <form onSubmit={handleSubmit} className="p-3 border-t bg-white rounded-b-xl">
-              <div className="flex gap-3">
-                <input
-                  type="text"
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  placeholder="Type your message..."
-                  className="flex-1 px-4 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#00DED2] bg-gray-50"
-                  disabled={isLoading}
-                />
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className={`px-4 py-2 bg-gradient-to-r from-[#00DED2] to-[#00DED2]/80 text-white rounded-xl transition-all flex items-center gap-2
-                    ${isLoading ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-lg hover:-translate-y-0.5'}`}
-                >
-                  <span>{isLoading ? 'Sending...' : 'Send'}</span>
-                  <Send className="w-4 h-4" />
-                </button>
+              <div className="flex gap-3 items-center">
+                <AudioRecorder onAudioRecorded={handleAudioRecorded} isLoading={isLoading} />
+                <div className="flex flex-1 gap-3">
+                  <input
+                    type="text"
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    placeholder="Type your message..."
+                    className="flex-1 px-4 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#00DED2] bg-gray-50"
+                    disabled={isLoading}
+                  />
+                  <button
+                    type="submit"
+                    disabled={isLoading}
+                    className={`px-4 py-2 bg-gradient-to-r from-[#00DED2] to-[#00DED2]/80 text-white rounded-xl transition-all flex items-center gap-2
+                      ${isLoading ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-lg hover:-translate-y-0.5'}`}
+                  >
+                    <span>{isLoading ? 'Sending...' : 'Send'}</span>
+                    <Send className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             </form>
           </motion.div>

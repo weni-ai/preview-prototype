@@ -249,6 +249,33 @@ def health_check():
         'timestamp': time.time()
     })
 
+@app.route('/api/transcribe', methods=['POST'])
+def transcribe_audio():
+    try:
+        if 'audio' not in request.files:
+            return jsonify({'error': 'No audio file provided'}), 400
+
+        audio_file = request.files['audio']
+        
+        # Create a temporary file to store the audio
+        temp_file = audio_file.read()
+        
+        # Transcribe the audio using OpenAI's Whisper model
+        response = client.audio.transcriptions.create(
+            model="whisper-1",
+            file=("audio.webm", temp_file, "audio/webm"),
+            response_format="text"
+        )
+        
+        return jsonify({
+            'status': 'success',
+            'text': response
+        })
+
+    except Exception as e:
+        logger.error(f"Error transcribing audio: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
     # app.run(port=5000, debug=True)
     socketio.run(app, port=5000, debug=True) 
