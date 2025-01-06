@@ -12,6 +12,7 @@ from tenacity import retry, stop_after_attempt, wait_exponential
 from openai import OpenAI
 import uuid
 from werkzeug.utils import secure_filename
+import base64
 
 # Only load .env file if it exists and don't override existing env vars
 load_dotenv(override=False)
@@ -300,6 +301,66 @@ def serve_audio(filename):
         return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
     except Exception as e:
         logger.error(f"Error serving audio file: {str(e)}")
+        return jsonify({'error': str(e)}), 404
+
+@app.route('/api/analyze-image', methods=['POST'])
+def analyze_image():
+    try:
+        if 'image' not in request.files:
+            return jsonify({'error': 'No image file provided'}), 400
+
+        image_file = request.files['image']
+        
+        # Generate a unique filename
+        filename = f"{uuid.uuid4()}{os.path.splitext(image_file.filename)[1]}"
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(filename))
+        
+        # Save the file
+        image_file.save(filepath)
+        
+        # Read the image file and encode it as base64
+        with open(filepath, 'rb') as f:
+            base64_image = base64.b64encode(f.read()).decode('utf-8')
+        
+        # Call OpenAI's Vision API
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": "What's in this image? Please provide a detailed but concise description."},
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:image/jpeg;base64,{base64_image}"
+                            }
+                        }
+                    ]
+                }
+            ],
+            max_tokens=300
+        )
+        
+        # Generate the URL for the image file
+        image_url = f"/api/images/{filename}"
+        
+        return jsonify({
+            'status': 'success',
+            'text': response.choices[0].message.content,
+            'imageUrl': image_url
+        })
+
+    except Exception as e:
+        logger.error(f"Error analyzing image: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/images/<filename>')
+def serve_image(filename):
+    try:
+        return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+    except Exception as e:
+        logger.error(f"Error serving image file: {str(e)}")
         return jsonify({'error': str(e)}), 404
 
 if __name__ == '__main__':

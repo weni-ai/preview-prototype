@@ -9,6 +9,7 @@ import { OrderMessage } from './OrderMessage';
 import { OrderDetails } from './OrderDetails';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AudioRecorder } from './AudioRecorder';
+import { ImageUploader } from './ImageUploader';
 
 interface Product {
   id: string;
@@ -117,6 +118,16 @@ export function Chat({ messages, onSendMessage, isLoading }: ChatProps) {
     onSendMessage(`<Order>${JSON.stringify(orderMessage)}</Order>`);
   };
 
+  const handleImageAnalyzed = (text: string, imageUrl: string) => {
+    if (text.trim() && !isLoading) {
+      onSendMessage(JSON.stringify({
+        type: 'image',
+        text,
+        imageUrl
+      }));
+    }
+  };
+
   const renderMessageContent = (message: Message) => {
     try {
       const content = JSON.parse(message.text);
@@ -149,8 +160,21 @@ export function Chat({ messages, onSendMessage, isLoading }: ChatProps) {
           </div>
         );
       }
+      
+      if (content.type === 'image') {
+        return (
+          <div className="space-y-3">
+            <img
+              src={content.imageUrl}
+              alt="Uploaded image"
+              className="max-w-[300px] rounded-lg shadow-sm"
+            />
+            <p className="text-sm opacity-90">{content.text}</p>
+          </div>
+        );
+      }
     } catch (e) {
-      // Not an audio message, continue with normal message handling
+      // Not a special message type, continue with normal message handling
     }
 
     const products = parseProductCatalog(message.text);
@@ -257,6 +281,7 @@ export function Chat({ messages, onSendMessage, isLoading }: ChatProps) {
             <form onSubmit={handleSubmit} className="p-3 border-t bg-white rounded-b-xl">
               <div className="flex gap-3 items-center">
                 <AudioRecorder onAudioRecorded={handleAudioRecorded} isLoading={isLoading} />
+                <ImageUploader onImageAnalyzed={handleImageAnalyzed} isLoading={isLoading} />
                 <div className="flex flex-1 gap-3">
                   <input
                     type="text"
