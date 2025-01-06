@@ -41,6 +41,7 @@ export function Chat({ messages, onSendMessage, isLoading }: ChatProps) {
   const [currentCatalogProducts, setCurrentCatalogProducts] = useState<Product[]>([]);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [shouldClearImage, setShouldClearImage] = useState(false);
+  const [isSending, setIsSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [playingAudio, setPlayingAudio] = useState<string | null>(null);
   const audioRefs = useRef<{ [key: string]: HTMLAudioElement }>({});
@@ -55,7 +56,9 @@ export function Chat({ messages, onSendMessage, isLoading }: ChatProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isLoading) return;
+    if (isLoading || isSending) return;
+
+    setIsSending(true);
 
     if (selectedImage) {
       const formData = new FormData();
@@ -84,10 +87,15 @@ export function Chat({ messages, onSendMessage, isLoading }: ChatProps) {
         }
       } catch (error) {
         console.error('Error sending image for analysis:', error);
+      } finally {
+        setIsSending(false);
       }
     } else if (input.trim()) {
       onSendMessage(input);
       setInput('');
+      setIsSending(false);
+    } else {
+      setIsSending(false);
     }
   };
 
@@ -327,6 +335,7 @@ export function Chat({ messages, onSendMessage, isLoading }: ChatProps) {
                   isLoading={isLoading} 
                   onImageSelected={handleImageSelected}
                   shouldClear={shouldClearImage}
+                  isSending={isSending}
                 />
                 <form onSubmit={handleSubmit} className="flex flex-1 gap-3">
                   <input
@@ -335,15 +344,15 @@ export function Chat({ messages, onSendMessage, isLoading }: ChatProps) {
                     onChange={(e) => setInput(e.target.value)}
                     placeholder={selectedImage ? "What would you like to know about this image?" : "Type your message..."}
                     className="flex-1 px-4 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#00DED2] bg-gray-50"
-                    disabled={isLoading}
+                    disabled={isLoading || isSending}
                   />
                   <button
                     type="submit"
-                    disabled={isLoading || (!input.trim() && !selectedImage)}
+                    disabled={isLoading || isSending || (!input.trim() && !selectedImage)}
                     className={`px-4 py-2 bg-gradient-to-r from-[#00DED2] to-[#00DED2]/80 text-white rounded-xl transition-all flex items-center gap-2
-                      ${(isLoading || (!input.trim() && !selectedImage)) ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-lg hover:-translate-y-0.5'}`}
+                      ${(isLoading || isSending || (!input.trim() && !selectedImage)) ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-lg hover:-translate-y-0.5'}`}
                   >
-                    <span>{isLoading ? 'Sending...' : 'Send'}</span>
+                    <span>{isLoading || isSending ? 'Sending...' : 'Send'}</span>
                     <Send className="w-4 h-4" />
                   </button>
                 </form>

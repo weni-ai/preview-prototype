@@ -5,12 +5,13 @@ const BACKEND_URL = (window as any).configs?.VITE_API_BASE_URL || import.meta.en
 
 interface ImageUploaderProps {
   onImageAnalyzed: (text: string, imageUrl: string) => void;
-  isLoading: boolean;
   onImageSelected: (file: File | null) => void;
-  shouldClear?: boolean;
+  isLoading: boolean;
+  isSending?: boolean;
+  shouldClear: boolean;
 }
 
-export function ImageUploader({ onImageAnalyzed, isLoading, onImageSelected, shouldClear }: ImageUploaderProps) {
+export function ImageUploader({ onImageAnalyzed, onImageSelected, isLoading, isSending = false, shouldClear }: ImageUploaderProps) {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -47,13 +48,14 @@ export function ImageUploader({ onImageAnalyzed, isLoading, onImageSelected, sho
         onChange={handleImageSelect}
         className="hidden"
         ref={fileInputRef}
+        disabled={isLoading || isSending}
       />
       {!selectedImage ? (
         <button
           onClick={() => fileInputRef.current?.click()}
-          disabled={isLoading}
+          disabled={isLoading || isSending}
           className={`p-2 rounded-full transition-all ${
-            isLoading
+            isLoading || isSending
               ? 'bg-gray-200 cursor-not-allowed'
               : 'bg-[#00DED2] hover:bg-[#00DED2]/80'
           }`}
@@ -70,7 +72,12 @@ export function ImageUploader({ onImageAnalyzed, isLoading, onImageSelected, sho
             />
             <button
               onClick={clearSelectedImage}
-              className="absolute -top-2 -right-2 p-1 rounded-full bg-white shadow-md hover:bg-gray-100"
+              disabled={isLoading || isSending}
+              className={`absolute -top-2 -right-2 p-1 rounded-full bg-white shadow-md ${
+                isLoading || isSending
+                  ? 'opacity-50 cursor-not-allowed'
+                  : 'hover:bg-gray-100'
+              }`}
             >
               <X className="w-4 h-4 text-gray-600" />
             </button>
