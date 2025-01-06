@@ -117,13 +117,46 @@ def on_join(data):
 def handle_disconnect():
     logger.info(f"Client disconnected with SID: {request.sid}")
 
+def parse_message_content(message):
+    """
+    Parse message content intelligently:
+    - If message is a string that contains valid JSON with 'text' field, extract the text
+    - If message is a string but not JSON, return as is
+    - If message is any other type, convert to string
+    """
+    if not isinstance(message, str):
+        return str(message)
+    
+    # Check if the string starts with { and ends with } (potential JSON)
+    message = message.strip()
+    if message.startswith('{') and message.endswith('}'):
+        try:
+            message_data = json.loads(message)
+            if isinstance(message_data, dict) and 'text' in message_data:
+                return message_data['text']
+        except json.JSONDecodeError:
+            pass
+    
+    return message
+
 @app.route('/api/chat', methods=['POST'])
 def chat():
     try:
-        data = request.json
-        input_text = data.get('message')
+        data = request.get_json()
+        message = data.get('message', '')
+        
+        # If message is a JSON string, get the text field
+        if isinstance(message, str):
+            try:
+                message_data = json.loads(message)
+                input_text = message_data.get('text', message)
+            except json.JSONDecodeError:
+                input_text = message
+        else:
+            input_text = str(message)
+
         session_id = data.get('sessionId', 'default-session')
-        logger.info(f"Processing chat for session: {session_id}")
+        logger.info(f"Processing chat for session: {session_id} with text: {input_text}")
         
         agent_id = os.getenv('BEDROCK_AGENT_ID')
         agent_alias = os.getenv('BEDROCK_AGENT_ALIAS')
