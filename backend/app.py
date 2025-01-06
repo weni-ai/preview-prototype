@@ -55,6 +55,19 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
+CLOTHING_ANALYSIS_PROMPT_TEMPLATE = '''Based on the following image description: {image_analysis}
+
+User is looking for: {input_text}
+
+Please consider:
+1. Visual details like colors, patterns, and style
+2. Clothing categories and types
+3. Material and fabric descriptions
+4. Fit and sizing elements
+5. Similar or alternative clothing suggestions
+
+Provide relevant product recommendations and insights.'''
+
 def get_bedrock_client():
     session = boto3.Session(
         aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
@@ -150,6 +163,13 @@ def chat():
             try:
                 message_data = json.loads(message)
                 input_text = message_data.get('text', message)
+
+                if message_data.get("type") == "image" and message_data.get('imageAnalysis'):
+                    image_analysis = message_data.get('imageAnalysis')
+                    input_text = CLOTHING_ANALYSIS_PROMPT_TEMPLATE.format(
+                        image_analysis=image_analysis,
+                        input_text=input_text
+                    )
             except json.JSONDecodeError:
                 input_text = message
         else:

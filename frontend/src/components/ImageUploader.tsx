@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Image as ImageIcon, X } from 'lucide-react';
 
 const BACKEND_URL = (window as any).configs?.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:5000';
@@ -6,18 +6,27 @@ const BACKEND_URL = (window as any).configs?.VITE_API_BASE_URL || import.meta.en
 interface ImageUploaderProps {
   onImageAnalyzed: (text: string, imageUrl: string) => void;
   isLoading: boolean;
+  onImageSelected: (file: File | null) => void;
+  shouldClear?: boolean;
 }
 
-export function ImageUploader({ onImageAnalyzed, isLoading }: ImageUploaderProps) {
+export function ImageUploader({ onImageAnalyzed, isLoading, onImageSelected, shouldClear }: ImageUploaderProps) {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (shouldClear) {
+      clearSelectedImage();
+    }
+  }, [shouldClear]);
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       setSelectedImage(file);
       setPreviewUrl(URL.createObjectURL(file));
+      onImageSelected(file);
     }
   };
 
@@ -27,30 +36,7 @@ export function ImageUploader({ onImageAnalyzed, isLoading }: ImageUploaderProps
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
-  };
-
-  const sendImageForAnalysis = async () => {
-    if (!selectedImage) return;
-
-    const formData = new FormData();
-    formData.append('image', selectedImage);
-
-    try {
-      const response = await fetch(`${BACKEND_URL}/api/analyze-image`, {
-        method: 'POST',
-        body: formData,
-      });
-
-      const data = await response.json();
-      if (data.status === 'success' && data.text) {
-        onImageAnalyzed(data.text, `${BACKEND_URL}${data.imageUrl}`);
-        clearSelectedImage();
-      } else {
-        console.error('Image analysis failed:', data.error);
-      }
-    } catch (error) {
-      console.error('Error sending image for analysis:', error);
-    }
+    onImageSelected(null);
   };
 
   return (
@@ -89,17 +75,6 @@ export function ImageUploader({ onImageAnalyzed, isLoading }: ImageUploaderProps
               <X className="w-4 h-4 text-gray-600" />
             </button>
           </div>
-          <button
-            onClick={sendImageForAnalysis}
-            disabled={isLoading}
-            className={`px-4 py-2 rounded-lg transition-all ${
-              isLoading
-                ? 'bg-gray-200 cursor-not-allowed'
-                : 'bg-[#00DED2] hover:bg-[#00DED2]/80 text-white'
-            }`}
-          >
-            {isLoading ? 'Analyzing...' : 'Analyze'}
-          </button>
         </div>
       )}
     </div>

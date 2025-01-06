@@ -11,6 +11,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { AudioRecorder } from './AudioRecorder';
 import { ImageUploader } from './ImageUploader';
 
+const BACKEND_URL = (window as any).configs?.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:5000';
+
 interface Product {
   id: string;
   name: string;
@@ -37,6 +39,8 @@ export function Chat({ messages, onSendMessage, isLoading }: ChatProps) {
   const [showOrderDetails, setShowOrderDetails] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [currentCatalogProducts, setCurrentCatalogProducts] = useState<Product[]>([]);
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [shouldClearImage, setShouldClearImage] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [playingAudio, setPlayingAudio] = useState<string | null>(null);
   const audioRefs = useRef<{ [key: string]: HTMLAudioElement }>({});
@@ -49,9 +53,39 @@ export function Chat({ messages, onSendMessage, isLoading }: ChatProps) {
     scrollToBottom();
   }, [messages]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (input.trim() && !isLoading) {
+    if (isLoading) return;
+
+    if (selectedImage) {
+      const formData = new FormData();
+      formData.append('image', selectedImage);
+
+      try {
+        const response = await fetch(`${BACKEND_URL}/api/analyze-image`, {
+          method: 'POST',
+          body: formData,
+        });
+
+        const data = await response.json();
+        if (data.status === 'success' && data.text) {
+          onSendMessage(JSON.stringify({
+            type: 'image',
+            text: input.trim(),
+            imageUrl: `${BACKEND_URL}${data.imageUrl}`,
+            imageAnalysis: data.text
+          }));
+          // Clear inputs only after successful analysis
+          setSelectedImage(null);
+          setInput('');
+          setShouldClearImage(true);
+        } else {
+          console.error('Image analysis failed:', data.error);
+        }
+      } catch (error) {
+        console.error('Error sending image for analysis:', error);
+      }
+    } else if (input.trim()) {
       onSendMessage(input);
       setInput('');
     }
@@ -128,6 +162,11 @@ export function Chat({ messages, onSendMessage, isLoading }: ChatProps) {
     }
   };
 
+  const handleImageSelected = (file: File | null) => {
+    setSelectedImage(file);
+    setShouldClearImage(false);
+  };
+
   const renderMessageContent = (message: Message) => {
     try {
       const content = JSON.parse(message.text);
@@ -164,12 +203,14 @@ export function Chat({ messages, onSendMessage, isLoading }: ChatProps) {
       if (content.type === 'image') {
         return (
           <div className="space-y-3">
+            {content.text && (
+              <p className="text-base leading-relaxed whitespace-pre-wrap mb-2">{content.text}</p>
+            )}
             <img
               src={content.imageUrl}
               alt="Uploaded image"
               className="max-w-[300px] rounded-lg shadow-sm"
             />
-            <p className="text-sm opacity-90">{content.text}</p>
           </div>
         );
       }
@@ -281,21 +322,26 @@ export function Chat({ messages, onSendMessage, isLoading }: ChatProps) {
             <div className="p-3 border-t bg-white rounded-b-xl">
               <div className="flex gap-3 items-center">
                 <AudioRecorder onAudioRecorded={handleAudioRecorded} isLoading={isLoading} />
-                <ImageUploader onImageAnalyzed={handleImageAnalyzed} isLoading={isLoading} />
+                <ImageUploader 
+                  onImageAnalyzed={handleImageAnalyzed} 
+                  isLoading={isLoading} 
+                  onImageSelected={handleImageSelected}
+                  shouldClear={shouldClearImage}
+                />
                 <form onSubmit={handleSubmit} className="flex flex-1 gap-3">
                   <input
                     type="text"
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
-                    placeholder="Type your message..."
+                    placeholder={selectedImage ? "What would you like to know about this image?" : "Type your message..."}
                     className="flex-1 px-4 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#00DED2] bg-gray-50"
                     disabled={isLoading}
                   />
                   <button
                     type="submit"
-                    disabled={isLoading}
+                    disabled={isLoading || (!input.trim() && !selectedImage)}
                     className={`px-4 py-2 bg-gradient-to-r from-[#00DED2] to-[#00DED2]/80 text-white rounded-xl transition-all flex items-center gap-2
-                      ${isLoading ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-lg hover:-translate-y-0.5'}`}
+                      ${(isLoading || (!input.trim() && !selectedImage)) ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-lg hover:-translate-y-0.5'}`}
                   >
                     <span>{isLoading ? 'Sending...' : 'Send'}</span>
                     <Send className="w-4 h-4" />
