@@ -156,25 +156,28 @@ def parse_message_content(message):
 def chat():
     try:
         data = request.get_json()
-        message = data.get('message', '')
+        raw_message = data.get('message', '')
         skip_trace_summary = data.get('skip_trace_summary', False)
         
-        # If message is a JSON string, get the text field
-        if isinstance(message, str):
+        # Convert the message to string first
+        message = str(raw_message)
+        input_text = message
+
+        # Only try to parse as JSON if it looks like a JSON object or array
+        if message.startswith('{') or message.startswith('['):
             try:
                 message_data = json.loads(message)
-                input_text = message_data.get('text', message)
-
-                if message_data.get("type") == "image" and message_data.get('imageAnalysis'):
-                    image_analysis = message_data.get('imageAnalysis')
-                    input_text = CLOTHING_ANALYSIS_PROMPT_TEMPLATE.format(
-                        image_analysis=image_analysis,
-                        input_text=input_text
-                    )
+                if isinstance(message_data, dict):
+                    input_text = message_data.get('text', message)
+                    
+                    if message_data.get("type") == "image" and message_data.get('imageAnalysis'):
+                        image_analysis = message_data.get('imageAnalysis')
+                        input_text = CLOTHING_ANALYSIS_PROMPT_TEMPLATE.format(
+                            image_analysis=image_analysis,
+                            input_text=input_text
+                        )
             except json.JSONDecodeError:
-                input_text = message
-        else:
-            input_text = str(message)
+                pass  # Keep the original message if JSON parsing fails
 
         session_id = data.get('sessionId', 'default-session')
         logger.info(f"Processing chat for session: {session_id} with text: {input_text}")

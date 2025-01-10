@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { ChevronLeft, ShoppingBag } from 'lucide-react';
-import { formatBRL } from '../utils/currency';
+import { formatCurrency } from '../utils/currency';
 
 interface OrderItem {
   product_retailer_id: string;
@@ -49,7 +49,7 @@ export function OrderDetails({ items, timestamp, onClose }: OrderDetailsProps) {
           <span className="font-medium">{items.length} {items.length === 1 ? 'item' : 'items'}</span>
         </div>
         <div className="text-[#00DED2] font-semibold text-lg mt-1">
-          {formatBRL(totalAmount)}
+          {formatCurrency(totalAmount)}
         </div>
       </div>
 
@@ -74,14 +74,14 @@ export function OrderDetails({ items, timestamp, onClose }: OrderDetailsProps) {
               <h3 className="font-medium text-gray-800">{item.name}</h3>
               <div className="flex justify-between items-center mt-2">
                 <div className="text-[#00DED2] font-medium">
-                  {formatBRL(item.item_price)}
+                  {formatCurrency(item.item_price)}
                 </div>
                 <div className="text-gray-600">
                   Quantity: {item.quantity}
                 </div>
               </div>
               <div className="text-sm text-gray-500 mt-1">
-                Subtotal: {formatBRL(item.item_price * item.quantity)}
+                Subtotal: {formatCurrency(item.item_price * item.quantity)}
               </div>
             </div>
           </div>
@@ -92,7 +92,7 @@ export function OrderDetails({ items, timestamp, onClose }: OrderDetailsProps) {
       <div className="border-t p-4 space-y-4 bg-gray-50">
         <div className="flex justify-between items-center">
           <span className="font-medium text-gray-600">Total Amount</span>
-          <span className="text-[#00DED2] font-bold text-lg">{formatBRL(totalAmount)}</span>
+          <span className="text-[#00DED2] font-bold text-lg">{formatCurrency(totalAmount)}</span>
         </div>
         <p className="text-sm text-gray-500">
           Thank you for your order. We will process it shortly.

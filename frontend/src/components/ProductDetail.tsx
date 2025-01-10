@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { ChevronLeft, Plus, Minus } from 'lucide-react';
-import { formatBRL } from '../utils/currency';
+import { formatCurrency } from '../utils/currency';
 
 interface Product {
   id: string;
@@ -63,11 +63,11 @@ export function ProductDetail({ product, onClose, onAddToCart, initialQuantity =
           <h2 className="text-xl font-semibold">{product.name}</h2>
           <div className="flex items-baseline gap-2 mt-1">
             <p className="text-[#00DED2] text-xl font-semibold">
-              {formatBRL(product.price)}
+              {formatCurrency(product.price)}
             </p>
             {product.originalPrice && (
               <span className="text-gray-400 line-through">
-                {formatBRL(product.originalPrice)}
+                {formatCurrency(product.originalPrice)}
               </span>
             )}
           </div>
@@ -112,7 +112,7 @@ export function ProductDetail({ product, onClose, onAddToCart, initialQuantity =
               : 'bg-gradient-to-r from-[#00DED2] to-[#00DED2]/80 text-white'
           }`}
         >
-          {quantity === 0 ? 'SELECT QUANTITY' : `ADD TO CART • ${formatBRL(product.price * quantity)}`}
+          {quantity === 0 ? 'SELECT QUANTITY' : `ADD TO CART • ${formatCurrency(product.price * quantity)}`}
         </motion.button>
       </div>
     </motion.div>

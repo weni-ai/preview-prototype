@@ -2,7 +2,7 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Plus, Minus } from 'lucide-react';
 import { useCart } from '../contexts/CartContext';
-import { formatBRL } from '../utils/currency';
+import { formatCurrency } from '../utils/currency';
 
 interface CartProps {
   onClose: () => void;
@@ -10,14 +10,14 @@ interface CartProps {
 }
 
 export function Cart({ onClose, onPlaceOrder }: CartProps) {
-  const { items, updateQuantity, totalAmount, clearCart } = useCart();
+  const { items, addToCart, removeFromCart, totalAmount, clearCart } = useCart();
 
   const handlePlaceOrder = () => {
     const orderItems = items.map(item => ({
-      product_retailer_id: item.product_retailer_id,
+      id: item.id,
       quantity: item.quantity,
-      item_price: item.price,
-      currency: "BRL",
+      price: item.price,
+      currency: "USD",
       name: item.name,
       image: item.image,
       sellerId: item.sellerId
@@ -75,20 +75,26 @@ export function Cart({ onClose, onPlaceOrder }: CartProps) {
                 <div className="flex items-center justify-between mt-2">
                   <div className="flex items-center gap-2">
                     <button
-                      onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                      onClick={() => removeFromCart(item.id)}
                       className="p-1 rounded-full hover:bg-gray-100"
                     >
                       <Minus className="w-4 h-4" />
                     </button>
                     <span className="w-8 text-center">{item.quantity}</span>
                     <button
-                      onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                      onClick={() => addToCart({
+                        id: item.id,
+                        name: item.name,
+                        price: item.price,
+                        image: item.image,
+                        sellerId: item.sellerId
+                      })}
                       className="p-1 rounded-full hover:bg-gray-100"
                     >
                       <Plus className="w-4 h-4" />
                     </button>
                   </div>
-                  <span className="font-medium">{formatBRL(item.price)}</span>
+                  <span className="font-medium">{formatCurrency(item.price)}</span>
                 </div>
               </div>
             </div>
@@ -99,7 +105,7 @@ export function Cart({ onClose, onPlaceOrder }: CartProps) {
         <div className="p-4 border-t space-y-4">
           <div className="flex justify-between items-center">
             <span className="font-medium">Subtotal</span>
-            <span className="font-bold">{formatBRL(totalAmount)}</span>
+            <span className="font-bold">{formatCurrency(totalAmount)}</span>
           </div>
           <p className="text-sm text-gray-500">
             Additional charges may apply. We will follow-up on how to complete your order & pay.

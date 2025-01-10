@@ -1,6 +1,6 @@
 import React from 'react';
 import { ShoppingBag } from 'lucide-react';
-import { formatBRL } from '../utils/currency';
+import { formatCurrency } from '../utils/currency';
 
 interface OrderItem {
   product_retailer_id: string;
@@ -47,7 +47,7 @@ export function OrderMessage({ items, onViewDetails }: OrderMessageProps) {
               <span>{items.length} {items.length === 1 ? 'item' : 'items'}</span>
             </div>
             <div className="font-semibold text-lg mt-1">
-              {formatBRL(totalAmount)}
+              {formatCurrency(totalAmount)}
             </div>
           </div>
         </div>
