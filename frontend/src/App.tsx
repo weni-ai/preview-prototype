@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
 import { io, Socket } from 'socket.io-client';
 import { Chat } from './components/Chat';
 import { AgentNode } from './components/AgentNode';
@@ -11,8 +12,9 @@ import { OrchestrationView } from './components/OrchestrationView';
 import { Sparkles } from 'lucide-react';
 import { OrchestrationFlow } from './components/OrchestrationFlow';
 import { CartProvider } from './contexts/CartContext';
+import { WebChatWidget } from './components/WebChatWidget';
 
-function App() {
+function MainApp() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [traces, setTraces] = useState<Trace[]>([]);
   const [socket, setSocket] = useState<Socket | null>(null);
@@ -252,6 +254,20 @@ function App() {
         </div>
       </div>
     </CartProvider>
+  );
+}
+
+function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<MainApp />} />
+        <Route 
+          path="/iframe-chat" 
+          element={<WebChatWidget iframeUrl="https://www.demoaccount19.com/" />} 
+        />
+      </Routes>
+    </BrowserRouter>
   );
 }
 

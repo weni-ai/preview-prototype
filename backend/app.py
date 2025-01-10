@@ -157,6 +157,7 @@ def chat():
     try:
         data = request.get_json()
         message = data.get('message', '')
+        skip_trace_summary = data.get('skip_trace_summary', False)
         
         # If message is a JSON string, get the text field
         if isinstance(message, str):
@@ -203,7 +204,7 @@ def chat():
             agentAliasId=agent_alias,
             sessionId=session_id,
             inputText=input_text,
-            enableTrace=True,
+            enableTrace=not skip_trace_summary,
             sessionState={
                 'knowledgeBaseConfigurations': [
                     {
@@ -215,7 +216,6 @@ def chat():
         )
 
         event_stream = response["completion"]
-        traces = []
         final_response = None
 
         for event in event_stream:
@@ -226,7 +226,7 @@ def chat():
                 # Emit the chunk in real-time to specific session room
                 logger.info(f"Emitting response chunk to session {session_id}")
                 socketio.emit('response_chunk', {'content': content}, room=session_id)
-            elif 'trace' in event:
+            elif 'trace' in event and not skip_trace_summary:
                 trace_data = event['trace']
                 if 'type' in trace_data:
                     formatted_trace = {
