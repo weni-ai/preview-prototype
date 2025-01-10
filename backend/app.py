@@ -120,6 +120,37 @@ def get_trace_summary(trace):
         logger.error(f"Error getting trace summary: {str(e)}")
         return "Processing your request now"
 
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
+def get_collaborator_description(collaborator_name: str, instruction: str) -> str:
+    try:
+        prompt = f"""
+        You are an AI agent describing your role in a team. Write a concise description that feels natural and clear.
+
+        Original name: {collaborator_name}
+        Original instruction: {instruction}
+        
+        Guidelines for your response:
+        - Write a concise, one-line description (maximum 5 words)
+        - Use active, present-tense verbs
+        - Focus on the core role of this agent for the team
+        - Keep it simple and clear
+        - Avoid technical jargon
+        """
+
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            max_tokens=50,
+            messages=[{
+                "role": "user",
+                "content": prompt
+            }]
+        )
+        
+        return response.choices[0].message.content
+    except Exception as e:
+        logger.error(f"Error getting collaborator description: {str(e)}")
+        return "Team member"
+
 # Socket.IO event handlers
 @socketio.on('connect')
 def handle_connect():
@@ -290,10 +321,15 @@ def list_collaborators():
         
         collaborators = []
         for collaborator in response.get('agentCollaboratorSummaries', []):
+            # Get a summarized description for each collaborator
+            original_name = collaborator.get('collaboratorName')
+            original_instruction = collaborator.get('collaborationInstruction')
+            summarized_description = get_collaborator_description(original_name, original_instruction)
+            
             collaborators.append({
                 'id': collaborator.get('agentDescriptor').get("aliasArn"),
-                'name': collaborator.get('collaboratorName'),
-                'description': collaborator.get('collaborationInstruction'),
+                'name': original_name,
+                'description': summarized_description,
                 'type': 'COLLABORATOR'
             })
 
@@ -304,7 +340,7 @@ def list_collaborators():
             'manager': {
                 'id': f"arn:aws:bedrock:us-east-1:005047304657:agent-alias/{agent_id}/{agent_alias}",
                 'name': 'Manager',
-                'description': 'Coordinate the team',
+                'description': 'Coordinating team tasks',
                 'type': 'MANAGER'
             }
         })

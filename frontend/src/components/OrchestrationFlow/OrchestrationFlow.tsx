@@ -113,7 +113,7 @@ export function OrchestrationFlow({ traces, collaborators }: OrchestrationFlowPr
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'active':
-        return 'bg-gradient-to-r from-blue-500 to-indigo-500';
+        return 'bg-gradient-to-r from-[#00DED2] to-[#00DED2]/80';
       case 'completed':
         return 'bg-gradient-to-r from-green-500 to-emerald-500';
       default:
@@ -121,9 +121,28 @@ export function OrchestrationFlow({ traces, collaborators }: OrchestrationFlowPr
     }
   };
 
-  const renderAgent = (agent: Agent, isManager: boolean = false) => {
+  const getMessageBubbleAnimation = (isManager: boolean, index: number) => {
+    if (isManager) {
+      return {
+        initial: { opacity: 0, y: -10 },
+        animate: { opacity: 1, y: 0 },
+        exit: { opacity: 0, y: 10 }
+      };
+    }
+    
+    // For collaborators, animate from the sides
+    const isEven = index % 2 === 0;
+    return {
+      initial: { opacity: 0, x: isEven ? 10 : -10 },
+      animate: { opacity: 1, x: 0 },
+      exit: { opacity: 0, x: isEven ? -10 : 10 }
+    };
+  };
+
+  const renderAgent = (agent: Agent, isManager: boolean = false, index: number = 0) => {
     const CardComponent = isManager ? styles.managerCard : styles.collaboratorCard;
     const isActive = agent.status === 'active';
+    const bubbleAnimation = getMessageBubbleAnimation(isManager, index);
     
     return (
       <motion.div
@@ -142,6 +161,23 @@ export function OrchestrationFlow({ traces, collaborators }: OrchestrationFlowPr
         }}
         whileHover={{ scale: 1.02 }}
       >
+        {isActive && agent.summary && (
+          <AnimatePresence>
+            <motion.div
+              className={styles.messageBubble}
+              initial={bubbleAnimation.initial}
+              animate={bubbleAnimation.animate}
+              exit={bubbleAnimation.exit}
+              transition={{ duration: 0.2 }}
+            >
+              <p className={styles.messageBubbleContent}>{agent.summary}</p>
+              <div className={styles.statusIndicator}>
+                <Activity className="w-3 h-3 text-[#00DED2] animate-pulse" />
+                <span className="text-xs text-[#00DED2]">Processing</span>
+              </div>
+            </motion.div>
+          </AnimatePresence>
+        )}
         <div className={`${styles.iconContainer} ${getStatusColor(agent.status)}`}>
           {getIconForType(agent.type)}
           {isActive && (
@@ -163,21 +199,6 @@ export function OrchestrationFlow({ traces, collaborators }: OrchestrationFlowPr
         <div className={styles.agentInfo}>
           <h3 className={styles.agentName}>{agent.name}</h3>
           <p className={styles.agentDescription}>{agent.description}</p>
-          {isActive && agent.summary && (
-            <motion.div
-              className={styles.summaryContainer}
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.2 }}
-            >
-              <p className={styles.agentSummary}>{agent.summary}</p>
-              <div className={styles.statusIndicator}>
-                <Activity className="w-4 h-4 text-blue-500 animate-pulse" />
-                <span className="text-sm text-blue-500">Processing</span>
-              </div>
-            </motion.div>
-          )}
         </div>
       </motion.div>
     );
@@ -193,27 +214,14 @@ export function OrchestrationFlow({ traces, collaborators }: OrchestrationFlowPr
           {agents.length > 0 && (
             <>
               {managerAgent && (
-                <>
-                  {renderAgent(managerAgent, true)}
-                  <motion.div
-                    className={styles.verticalConnector}
-                    initial={{ opacity: 0, scale: 0 }}
-                    animate={{ 
-                      opacity: managerAgent.status !== 'waiting' ? 1 : 0.3,
-                      scale: 1
-                    }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <ArrowRight className={`w-5 h-5 ${
-                      managerAgent.status === 'completed' ? 'text-green-500' : 'text-gray-400'
-                    }`} />
-                  </motion.div>
-                </>
+                <div className={styles.managerSection}>
+                  {renderAgent(managerAgent, true, 0)}
+                </div>
               )}
               <div className={styles.collaboratorsGrid}>
-                {collaboratorAgents.map((agent) => (
+                {collaboratorAgents.map((agent, index) => (
                   <React.Fragment key={agent.id}>
-                    {renderAgent(agent)}
+                    {renderAgent(agent, false, index)}
                   </React.Fragment>
                 ))}
               </div>
