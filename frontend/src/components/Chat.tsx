@@ -10,6 +10,7 @@ import { OrderDetails } from './OrderDetails';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AudioRecorder } from './AudioRecorder';
 import { ImageUploader } from './ImageUploader';
+import { URLButton } from './URLButton';
 
 const BACKEND_URL = (window as any).configs?.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:5000';
 
@@ -208,9 +209,15 @@ export function Chat({ messages, onSendMessage, isLoading }: ChatProps) {
     setShouldClearImage(false);
   };
 
+  const replaceRedactedWithOrderForm = (text: string) => {
+    return text.replace(/<REDACTED>/g, 'orderForm');
+  };
+
   const renderMessageContent = (message: Message) => {
+    const processedText = replaceRedactedWithOrderForm(message.text);
+    
     try {
-      const content = JSON.parse(message.text);
+      const content = JSON.parse(processedText);
       if (content.type === 'audio') {
         return (
           <div className="space-y-2">
@@ -259,11 +266,18 @@ export function Chat({ messages, onSendMessage, isLoading }: ChatProps) {
       // Not a special message type, continue with normal message handling
     }
 
-    const products = parseProductCatalog(message.text);
-    const order = parseOrderMessage(message.text);
+    // Check for URL button format
+    const urlButtonMatch = processedText.match(/(.*?)<URLButton>\[(.*?)\]\((.*?)\)<\/URLButton>/s);
+    if (urlButtonMatch) {
+      const [_, text, buttonText, url] = urlButtonMatch;
+      return <URLButton text={text.trim()} buttonText={buttonText} url={url} />;
+    }
+
+    const products = parseProductCatalog(processedText);
+    const order = parseOrderMessage(processedText);
     
     if (products) {
-      const textBeforeCatalog = message.text.split('<ProductCatalog>')[0].trim();
+      const textBeforeCatalog = processedText.split('<ProductCatalog>')[0].trim();
       return (
         <div className="space-y-3">
           {textBeforeCatalog && (
@@ -292,7 +306,7 @@ export function Chat({ messages, onSendMessage, isLoading }: ChatProps) {
       );
     }
 
-    return <p className="text-base leading-relaxed whitespace-pre-wrap">{message.text}</p>;
+    return <p className="text-base leading-relaxed whitespace-pre-wrap">{processedText}</p>;
   };
 
   return (

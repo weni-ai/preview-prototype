@@ -11,6 +11,7 @@ import { OrderMessage } from './OrderMessage';
 import { OrderDetails } from './OrderDetails';
 import { AudioRecorder } from './AudioRecorder';
 import { ImageUploader } from './ImageUploader';
+import { URLButton } from './URLButton';
 
 const TypingAnimation = () => (
   <div className="flex space-x-2 items-center">
@@ -233,33 +234,13 @@ export function WebChatWidget({ iframeUrl }: WebChatWidgetProps) {
     setShowOrderDetails(true);
   };
 
-  useEffect(() => {
-    if (currentResponse && isLoading) {
-      const products = parseProductCatalog(currentResponse);
-      const order = parseOrderMessage(currentResponse);
-
-      if (products) {
-        setCurrentCatalogProducts(products);
-      }
-
-      if (order) {
-        setSelectedOrder(order);
-      }
-
-      setMessages(prev => {
-        // Simply append the new message
-        return [...prev, {
-          text: currentResponse,
-          type: 'assistant',
-          role: 'assistant'
-        }];
-      });
-    }
-  }, [currentResponse, isLoading]);
-
   const handleViewCatalog = (products: Product[]) => {
     setCurrentCatalogProducts(products);
     setShowCatalog(true);
+  };
+
+  const replaceRedactedWithOrderForm = (text: string) => {
+    return text.replace(/<REDACTED>/g, 'orderForm');
   };
 
   const handleSendMessage = async (message: string) => {
@@ -363,9 +344,36 @@ export function WebChatWidget({ iframeUrl }: WebChatWidgetProps) {
     }
   };
 
+  useEffect(() => {
+    if (currentResponse && isLoading) {
+      const processedResponse = replaceRedactedWithOrderForm(currentResponse);
+      const products = parseProductCatalog(processedResponse);
+      const order = parseOrderMessage(processedResponse);
+
+      if (products) {
+        setCurrentCatalogProducts(products);
+      }
+
+      if (order) {
+        setSelectedOrder(order);
+      }
+
+      setMessages(prev => {
+        // Simply append the new message
+        return [...prev, {
+          text: processedResponse,
+          type: 'assistant',
+          role: 'assistant'
+        }];
+      });
+    }
+  }, [currentResponse, isLoading]);
+
   const renderMessageContent = (message: Message) => {
+    const processedText = replaceRedactedWithOrderForm(message.text);
+    
     try {
-      const content = JSON.parse(message.text);
+      const content = JSON.parse(processedText);
       if (content.type === 'audio') {
         return (
           <div className="space-y-2">
@@ -393,11 +401,18 @@ export function WebChatWidget({ iframeUrl }: WebChatWidgetProps) {
       // Not a special message type, continue with normal message handling
     }
 
-    const products = parseProductCatalog(message.text);
-    const order = parseOrderMessage(message.text);
+    // Check for URL button format
+    const urlButtonMatch = processedText.match(/(.*?)<URLButton>\[(.*?)\]\((.*?)\)<\/URLButton>/s);
+    if (urlButtonMatch) {
+      const [_, text, buttonText, url] = urlButtonMatch;
+      return <URLButton text={text.trim()} buttonText={buttonText} url={url} />;
+    }
+
+    const products = parseProductCatalog(processedText);
+    const order = parseOrderMessage(processedText);
     
     if (products && products.length > 0) {
-      const [beforeCatalog, afterCatalog] = message.text.split(/<ProductCatalog>.*?<\/ProductCatalog>/s);
+      const [beforeCatalog, afterCatalog] = processedText.split(/<ProductCatalog>.*?<\/ProductCatalog>/s);
       return (
         <div className="space-y-3">
           {beforeCatalog && (
@@ -475,7 +490,7 @@ export function WebChatWidget({ iframeUrl }: WebChatWidgetProps) {
       return <p className="text-base leading-relaxed whitespace-pre-wrap">{elements}</p>;
     };
 
-    return renderTextWithLinks(message.text);
+    return renderTextWithLinks(processedText);
   };
 
   return (
