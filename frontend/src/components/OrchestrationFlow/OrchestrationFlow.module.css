@@ -4,6 +4,7 @@
   margin: 0 auto;
   padding: 2rem;
   position: relative;
+  /* isolation: isolate; */
 }
 
 .agentsFlow {
@@ -19,7 +20,6 @@
   width: 100%;
   max-width: 300px;
   position: relative;
-  z-index: 3;
 }
 
 .managerCard {
@@ -36,13 +36,13 @@
 }
 
 .collaboratorCard {
+  position: relative;
   background: white;
   border-radius: 16px;
   padding: 1.5rem;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
   transition: all 0.3s ease;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -54,7 +54,6 @@
   gap: 2rem;
   width: 100%;
   position: relative;
-  z-index: 2;
 }
 
 .iconContainer {
@@ -102,79 +101,27 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   width: max-content;
   max-width: 200px;
-  z-index: 50;
+  z-index: 999999;
   border: 1px solid rgba(0, 222, 210, 0.2);
   backdrop-filter: blur(8px);
+  pointer-events: none;
 }
 
-/* Manager message bubble (bottom) */
-.managerCard .messageBubble {
-  top: 80%;
-  transform: translateX(-50%);
-  margin-top: 12px;
-  border: 1px solid rgba(0, 222, 210, 0.2);
-}
-
-.managerCard .messageBubble::after {
+.messageBubble::after {
   content: '';
   position: absolute;
-  top: -6px;
+  width: 12px;
+  height: 12px;
+  background: white;
+  border-radius: 2px;
+}
+
+/* All bubbles point up like manager */
+.messageBubble::after {
+  top: 0;
   left: 50%;
-  transform: translateX(-50%) rotate(45deg);
-  width: 12px;
-  height: 12px;
-  background: white;
-  border-radius: 2px;
-  z-index: -1;
+  transform: translate(-50%, -50%) rotate(45deg);
   border-left: 1px solid rgba(0, 222, 210, 0.2);
-  border-top: 1px solid rgba(0, 222, 210, 0.2);
-}
-
-/* Left column collaborator message bubble (right side) */
-.collaboratorCard:nth-child(odd) .messageBubble {
-  left: 100%;
-  top: 50%;
-  transform: translateY(-50%);
-  margin-left: 12px;
-  border: 1px solid rgba(0, 222, 210, 0.2);
-}
-
-.collaboratorCard:nth-child(odd) .messageBubble::after {
-  content: '';
-  position: absolute;
-  left: -6px;
-  top: 50%;
-  transform: translateY(-50%) rotate(45deg);
-  width: 12px;
-  height: 12px;
-  background: white;
-  border-radius: 2px;
-  z-index: -1;
-  border-left: 1px solid rgba(0, 222, 210, 0.2);
-  border-bottom: 1px solid rgba(0, 222, 210, 0.2);
-}
-
-/* Right column collaborator message bubble (left side) */
-.collaboratorCard:nth-child(even) .messageBubble {
-  right: 100%;
-  top: 50%;
-  transform: translateY(-50%);
-  margin-right: 12px;
-  border: 1px solid rgba(0, 222, 210, 0.2);
-}
-
-.collaboratorCard:nth-child(even) .messageBubble::after {
-  content: '';
-  position: absolute;
-  right: -6px;
-  top: 50%;
-  transform: translateY(-50%) rotate(45deg);
-  width: 12px;
-  height: 12px;
-  background: white;
-  border-radius: 2px;
-  z-index: -1;
-  border-right: 1px solid rgba(0, 222, 210, 0.2);
   border-top: 1px solid rgba(0, 222, 210, 0.2);
 }
 
@@ -184,7 +131,6 @@
   text-align: center;
   line-height: 1.2;
   position: relative;
-  z-index: 1;
 }
 
 .statusIndicator {
@@ -194,7 +140,6 @@
   gap: 0.25rem;
   margin-top: 0.25rem;
   position: relative;
-  z-index: 1;
 }
 
 .tracesContainer {

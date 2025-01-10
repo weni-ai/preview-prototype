@@ -22,9 +22,20 @@ interface Agent {
   description?: string;
 }
 
+interface MessageBubble {
+  message: string;
+  position: {
+    top: number;
+    left: number;
+  };
+  isManager: boolean;
+  isEven: boolean;
+}
+
 export function OrchestrationFlow({ traces, collaborators }: OrchestrationFlowProps) {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [activeAgent, setActiveAgent] = useState<string | null>(null);
+  const [messageBubbles, setMessageBubbles] = useState<Record<string, MessageBubble>>({});
 
   // Initialize agents from collaborators immediately
   useEffect(() => {
@@ -101,6 +112,60 @@ export function OrchestrationFlow({ traces, collaborators }: OrchestrationFlowPr
     }
   }, [traces, agents]);
 
+  // Update message bubble positions
+  useEffect(() => {
+    const updateBubblePositions = () => {
+      const container = document.querySelector(`.${styles.container}`);
+      if (!container) return;
+      
+      const containerRect = container.getBoundingClientRect();
+      
+      agents.forEach((agent) => {
+        if (agent.status === 'active' && agent.summary) {
+          const isManager = agent.type === 'MANAGER';
+          const index = agents.findIndex(a => a.id === agent.id);
+          
+          const cardElement = container.querySelector(`[data-agent-id="${agent.id}"]`);
+          if (cardElement) {
+            const rect = cardElement.getBoundingClientRect();
+            const isEven = index % 2 === 0;
+            
+            const position = {
+              top: rect.bottom - containerRect.top - 25, // Always align to bottom of card
+              left: rect.left + (rect.width / 2) - containerRect.left - 100, // Always center horizontally
+            };
+            
+            setMessageBubbles(prev => ({
+              ...prev,
+              [agent.id]: { 
+                message: agent.summary || '', 
+                position,
+                isManager,
+                isEven
+              }
+            }));
+          }
+        } else {
+          // Remove bubble if agent is not active
+          setMessageBubbles(prev => {
+            const { [agent.id]: removed, ...rest } = prev;
+            return rest;
+          });
+        }
+      });
+    };
+
+    // Update positions initially
+    updateBubblePositions();
+
+    // Update positions on window resize
+    window.addEventListener('resize', updateBubblePositions);
+    
+    return () => {
+      window.removeEventListener('resize', updateBubblePositions);
+    };
+  }, [agents]);
+
   const getIconForType = (type: string) => {
     switch (type.toUpperCase()) {
       case 'MANAGER':
@@ -142,10 +207,10 @@ export function OrchestrationFlow({ traces, collaborators }: OrchestrationFlowPr
   const renderAgent = (agent: Agent, isManager: boolean = false, index: number = 0) => {
     const CardComponent = isManager ? styles.managerCard : styles.collaboratorCard;
     const isActive = agent.status === 'active';
-    const bubbleAnimation = getMessageBubbleAnimation(isManager, index);
     
     return (
       <motion.div
+        data-agent-id={agent.id}
         className={CardComponent}
         initial={{ opacity: 0, y: 20 }}
         animate={{ 
@@ -161,23 +226,6 @@ export function OrchestrationFlow({ traces, collaborators }: OrchestrationFlowPr
         }}
         whileHover={{ scale: 1.02 }}
       >
-        {isActive && agent.summary && (
-          <AnimatePresence>
-            <motion.div
-              className={styles.messageBubble}
-              initial={bubbleAnimation.initial}
-              animate={bubbleAnimation.animate}
-              exit={bubbleAnimation.exit}
-              transition={{ duration: 0.2 }}
-            >
-              <p className={styles.messageBubbleContent}>{agent.summary}</p>
-              <div className={styles.statusIndicator}>
-                <Activity className="w-3 h-3 text-[#00DED2] animate-pulse" />
-                <span className="text-xs text-[#00DED2]">Processing</span>
-              </div>
-            </motion.div>
-          </AnimatePresence>
-        )}
         <div className={`${styles.iconContainer} ${getStatusColor(agent.status)}`}>
           {getIconForType(agent.type)}
           {isActive && (
@@ -229,6 +277,39 @@ export function OrchestrationFlow({ traces, collaborators }: OrchestrationFlowPr
           )}
         </AnimatePresence>
       </div>
+      
+      {/* Render message bubbles at root level */}
+      <AnimatePresence>
+        {Object.entries(messageBubbles).map(([agentId, { message, position, isManager }]) => {
+          const agent = agents.find(a => a.id === agentId);
+          if (!agent || agent.status !== 'active') return null;
+          
+          const bubbleAnimation = getMessageBubbleAnimation(isManager, agents.findIndex(a => a.id === agentId));
+          
+          return (
+            <motion.div
+              key={agentId}
+              className={styles.messageBubble}
+              initial={bubbleAnimation.initial}
+              animate={bubbleAnimation.animate}
+              exit={bubbleAnimation.exit}
+              transition={{ duration: 0.2 }}
+              style={{
+                position: 'absolute',
+                top: position.top,
+                left: position.left,
+                transform: 'translate(-50%, 12px)' // Same transform for all bubbles
+              }}
+            >
+              <p className={styles.messageBubbleContent}>{message}</p>
+              <div className={styles.statusIndicator}>
+                <Activity className="w-3 h-3 text-[#00DED2] animate-pulse" />
+                <span className="text-xs text-[#00DED2]">Processing</span>
+              </div>
+            </motion.div>
+          );
+        })}
+      </AnimatePresence>
     </div>
   );
 } 
