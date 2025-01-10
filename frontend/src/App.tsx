@@ -263,7 +263,7 @@ function App() {
       <Routes>
         <Route path="/" element={<MainApp />} />
         <Route 
-          path="/iframe-chat" 
+          path="/webchat" 
           element={<WebChatWidget iframeUrl="https://www.demoaccount19.com/" />} 
         />
       </Routes>
