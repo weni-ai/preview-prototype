@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { ChevronLeft, Plus, Minus } from 'lucide-react';
 import { formatCurrency } from '../utils/currency';
+import { handleImageError } from '../utils/imageUtils';
 
 interface Product {
   id: string;
@@ -54,6 +55,7 @@ export function ProductDetail({ product, onClose, onAddToCart, initialQuantity =
           src={product.image}
           alt={product.name}
           className="w-full h-full object-cover"
+          onError={handleImageError}
         />
       </div>
 

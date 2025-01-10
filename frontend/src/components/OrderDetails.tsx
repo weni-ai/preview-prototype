@@ -2,6 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { ChevronLeft, ShoppingBag } from 'lucide-react';
 import { formatCurrency } from '../utils/currency';
+import { handleImageError } from '../utils/imageUtils';
 
 interface OrderItem {
   product_retailer_id: string;
@@ -63,10 +64,7 @@ export function OrderDetails({ items, timestamp, onClose }: OrderDetailsProps) {
                   src={item.image}
                   alt={item.name}
                   className="w-full h-full object-cover"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.src = 'https://via.placeholder.com/80?text=No+Image';
-                  }}
+                  onError={handleImageError}
                 />
               </div>
             )}

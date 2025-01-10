@@ -1,4 +1,5 @@
 import React from 'react';
+import { handleImageError } from '../utils/imageUtils';
 
 interface Product {
   id: string;
@@ -25,6 +26,7 @@ export function CatalogPreview({ products, onViewCatalog }: CatalogPreviewProps)
           src={previewProduct.image}
           alt={previewProduct.name}
           className="w-full h-48 object-cover"
+          onError={handleImageError}
         />
         <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-4">
           <h3 className="text-white font-medium">View Product Catalog</h3>

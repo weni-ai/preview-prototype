@@ -4,6 +4,7 @@ import { formatCurrency } from '../utils/currency';
 import { ProductDetail } from './ProductDetail';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCart } from '../contexts/CartContext';
+import { handleImageError } from '../utils/imageUtils';
 
 interface Product {
   id: string;
@@ -113,6 +114,7 @@ export function ProductCatalog({ products, onClose, onViewCart }: ProductCatalog
                       className="w-20 h-20 object-cover rounded-lg"
                       whileHover={{ scale: 1.05 }}
                       transition={{ duration: 0.2 }}
+                      onError={handleImageError}
                     />
                     <div className="flex-1">
                       <h3 className="font-medium">{product.name}</h3>

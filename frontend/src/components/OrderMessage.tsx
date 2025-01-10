@@ -1,6 +1,7 @@
 import React from 'react';
 import { ShoppingBag } from 'lucide-react';
 import { formatCurrency } from '../utils/currency';
+import { handleImageError } from '../utils/imageUtils';
 
 interface OrderItem {
   product_retailer_id: string;
@@ -34,10 +35,7 @@ export function OrderMessage({ items, onViewDetails }: OrderMessageProps) {
                 src={firstItem.image}
                 alt={firstItem.name}
                 className="w-full h-full object-cover"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  target.src = 'https://via.placeholder.com/64?text=No+Image';
-                }}
+                onError={handleImageError}
               />
             </div>
           )}

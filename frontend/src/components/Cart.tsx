@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Plus, Minus } from 'lucide-react';
 import { useCart } from '../contexts/CartContext';
 import { formatCurrency } from '../utils/currency';
+import { handleImageError } from '../utils/imageUtils';
 
 interface CartProps {
   onClose: () => void;
@@ -64,10 +65,7 @@ export function Cart({ onClose, onPlaceOrder }: CartProps) {
                   src={item.image}
                   alt={item.name}
                   className="w-full h-full object-cover"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.src = 'https://via.placeholder.com/64?text=No+Image';
-                  }}
+                  onError={handleImageError}
                 />
               </div>
               <div className="flex-1">
