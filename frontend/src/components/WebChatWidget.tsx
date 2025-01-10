@@ -247,12 +247,27 @@ export function WebChatWidget({ iframeUrl }: WebChatWidgetProps) {
       }
 
       setMessages(prev => {
-        const withoutLastAssistant = prev.filter(msg => msg.type !== 'assistant');
-        return [...withoutLastAssistant, {
-          text: currentResponse,
-          type: 'assistant',
-          role: 'assistant'
-        }];
+        // Find the index of the last assistant message
+        const lastAssistantIndex = prev.map(msg => msg.type).lastIndexOf('assistant');
+        
+        if (lastAssistantIndex === -1) {
+          // If no assistant message exists, just append the new one
+          return [...prev, {
+            text: currentResponse,
+            type: 'assistant',
+            role: 'assistant'
+          }];
+        }
+        
+        // Keep all messages up to the last assistant message, then add the new one
+        return [
+          ...prev.slice(0, lastAssistantIndex),
+          {
+            text: currentResponse,
+            type: 'assistant',
+            role: 'assistant'
+          }
+        ];
       });
     }
   }, [currentResponse, isLoading]);
