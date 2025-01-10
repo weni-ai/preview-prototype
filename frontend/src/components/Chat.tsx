@@ -47,7 +47,9 @@ export function Chat({ messages, onSendMessage, isLoading }: ChatProps) {
   const audioRefs = useRef<{ [key: string]: HTMLAudioElement }>({});
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    }
   };
 
   useEffect(() => {
@@ -131,9 +133,14 @@ export function Chat({ messages, onSendMessage, isLoading }: ChatProps) {
     if (match) {
       try {
         const jsonStr = match[1].trim();
-        return JSON.parse(jsonStr);
+        // Fix common JSON formatting issues
+        const fixedJsonStr = jsonStr
+          .replace(/'/g, '"') // Replace single quotes with double quotes
+          .replace(/([{,]\s*)(\w+):/g, '$1"$2":'); // Add quotes around property names
+        return JSON.parse(fixedJsonStr);
       } catch (e) {
         console.error('Failed to parse product catalog:', e);
+        return null;
       }
     }
     return null;
@@ -144,9 +151,24 @@ export function Chat({ messages, onSendMessage, isLoading }: ChatProps) {
     if (match) {
       try {
         const jsonStr = match[1].trim();
-        return JSON.parse(jsonStr);
+        const order = JSON.parse(jsonStr);
+        // Ensure all items have the required fields
+        if (order.items) {
+          order.items = order.items.map((item: any) => ({
+            ...item,
+            name: item.name || item.productName || 'Unknown Product',
+            item_price: item.price || item.item_price || 0,
+            total: item.quantity * (item.price || item.item_price || 0)
+          }));
+          // Recalculate total if not present
+          if (!order.total) {
+            order.total = order.items.reduce((sum: number, item: any) => sum + item.total, 0);
+          }
+        }
+        return order;
       } catch (e) {
         console.error('Failed to parse order:', e);
+        return null;
       }
     }
     return null;
@@ -154,8 +176,18 @@ export function Chat({ messages, onSendMessage, isLoading }: ChatProps) {
 
   const handlePlaceOrder = (items: any[]) => {
     const orderMessage = {
-      items,
+      items: items.map(item => ({
+        quantity: item.quantity,
+        price: item.price,
+        currency: item.currency,
+        image: item.image,
+        sellerId: item.sellerId,
+        name: item.name || item.productName,
+        item_price: item.price,
+        total: item.quantity * item.price
+      })),
       timestamp: new Date().toISOString(),
+      total: items.reduce((sum, item) => sum + (item.quantity * item.price), 0)
     };
     onSendMessage(`<Order>${JSON.stringify(orderMessage)}</Order>`);
   };
@@ -263,7 +295,7 @@ export function Chat({ messages, onSendMessage, isLoading }: ChatProps) {
   };
 
   return (
-    <div className="flex flex-col flex-1 relative">
+    <div className="flex flex-col h-full relative">
       <AnimatePresence mode="wait">
         {showCatalog ? (
           <motion.div
@@ -271,7 +303,7 @@ export function Chat({ messages, onSendMessage, isLoading }: ChatProps) {
             initial={{ opacity: 0, x: 300 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -300 }}
-            className="absolute inset-0 bg-white"
+            className="absolute inset-0 bg-white z-10"
           >
             <ProductCatalog
               products={currentCatalogProducts}
@@ -288,7 +320,7 @@ export function Chat({ messages, onSendMessage, isLoading }: ChatProps) {
             initial={{ opacity: 0, x: 300 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -300 }}
-            className="absolute inset-0 bg-white"
+            className="absolute inset-0 bg-white z-10"
           >
             <OrderDetails
               items={selectedOrder.items}
@@ -305,69 +337,78 @@ export function Chat({ messages, onSendMessage, isLoading }: ChatProps) {
             initial={{ opacity: 0, x: -300 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 300 }}
-            className="flex flex-col flex-1 overflow-hidden"
+            className="flex flex-col h-full relative"
           >
-            <div className="flex-1 overflow-y-auto p-4 space-y-3">
-              {messages.map((message, index) => (
-                <div
-                  key={index}
-                  className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
-                >
-                  <div
-                    className={`max-w-[85%] rounded-2xl p-4 ${
-                      message.type === 'user'
-                        ? 'bg-gradient-to-r from-[#00DED2] to-[#00DED2]/80 text-white'
-                        : 'bg-white border border-gray-100 shadow-sm text-gray-800'
-                    }`}
-                  >
-                    {renderMessageContent(message)}
-                  </div>
+            <div className="absolute inset-0 flex flex-col">
+              <div className="flex-1 overflow-y-auto">
+                <div className="p-5 space-y-3">
+                  {messages.map((message, index) => (
+                    <div
+                      key={index}
+                      className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
+                    >
+                      <div
+                        className={`max-w-[85%] rounded-2xl p-4 ${
+                          message.type === 'user'
+                            ? 'bg-gradient-to-r from-[#00DED2] to-[#00DED2]/80 text-white'
+                            : 'bg-white border border-gray-100 shadow-sm text-gray-800'
+                        }`}
+                      >
+                        {renderMessageContent(message)}
+                      </div>
+                    </div>
+                  ))}
+                  <div ref={messagesEndRef} />
                 </div>
-              ))}
-              <div ref={messagesEndRef} />
-            </div>
+              </div>
 
-            <div className="flex-none p-3 border-t bg-white">
-              <div className="flex gap-3 items-center">
-                <AudioRecorder onAudioRecorded={handleAudioRecorded} isLoading={isLoading} />
-                <ImageUploader 
-                  onImageAnalyzed={handleImageAnalyzed} 
-                  isLoading={isLoading} 
-                  onImageSelected={handleImageSelected}
-                  shouldClear={shouldClearImage}
-                  isSending={isSending}
-                />
-                <form onSubmit={handleSubmit} className="flex flex-1 gap-3">
-                  <input
-                    type="text"
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    placeholder={selectedImage ? "What would you like to know about this image?" : "Type your message..."}
-                    className="flex-1 px-4 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#00DED2] bg-gray-50"
-                    disabled={isLoading || isSending}
+              <div className="flex-none p-3 border-t bg-white">
+                <div className="flex gap-3 items-center">
+                  <AudioRecorder onAudioRecorded={handleAudioRecorded} isLoading={isLoading} />
+                  <ImageUploader 
+                    onImageAnalyzed={handleImageAnalyzed} 
+                    isLoading={isLoading} 
+                    onImageSelected={handleImageSelected}
+                    shouldClear={shouldClearImage}
+                    isSending={isSending}
                   />
-                  <button
-                    type="submit"
-                    disabled={isLoading || isSending || (!input.trim() && !selectedImage)}
-                    className={`px-4 py-2 bg-gradient-to-r from-[#00DED2] to-[#00DED2]/80 text-white rounded-xl transition-all flex items-center gap-2
-                      ${(isLoading || isSending || (!input.trim() && !selectedImage)) ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-lg hover:-translate-y-0.5'}`}
-                  >
-                    <span>{isLoading || isSending ? 'Sending...' : 'Send'}</span>
-                    <Send className="w-4 h-4" />
-                  </button>
-                </form>
+                  <form onSubmit={handleSubmit} className="flex flex-1 gap-3">
+                    <input
+                      type="text"
+                      value={input}
+                      onChange={(e) => setInput(e.target.value)}
+                      placeholder={selectedImage ? "What would you like to know about this image?" : "Type your message..."}
+                      className="flex-1 px-4 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#00DED2] bg-gray-50"
+                      disabled={isLoading || isSending}
+                    />
+                    <button
+                      type="submit"
+                      disabled={isLoading || isSending || (!input.trim() && !selectedImage)}
+                      className={`px-4 py-2 bg-gradient-to-r from-[#00DED2] to-[#00DED2]/80 text-white rounded-xl transition-all flex items-center gap-2
+                        ${(isLoading || isSending || (!input.trim() && !selectedImage)) ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-lg hover:-translate-y-0.5'}`}
+                    >
+                      <span>{isLoading || isSending ? 'Sending...' : 'Send'}</span>
+                      <Send className="w-4 h-4" />
+                    </button>
+                  </form>
+                </div>
               </div>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      <FloatingCartButton onClick={() => setShowCart(true)} />
+      <div className="absolute bottom-4 right-4 z-20">
+        <FloatingCartButton onClick={() => setShowCart(true)} />
+      </div>
+
       {showCart && (
-        <Cart
-          onClose={() => setShowCart(false)}
-          onPlaceOrder={handlePlaceOrder}
-        />
+        <div className="absolute inset-0 bg-black/50 z-30 flex items-center justify-center">
+          <Cart
+            onClose={() => setShowCart(false)}
+            onPlaceOrder={handlePlaceOrder}
+          />
+        </div>
       )}
     </div>
   );

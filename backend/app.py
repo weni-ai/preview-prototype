@@ -93,12 +93,17 @@ def get_trace_summary(trace):
         time.sleep(3)
         
         prompt = f"""
-        Summarize this Bedrock Agent trace in a clear and concise way, focusing on what the agent is doing in this step:
-        
+        You are an AI agent naturally describing your current action. Write a first-person summary that feels conversational and engaging.
+
+        Here's the trace of your action:
         {json.dumps(trace, indent=2)}
         
-        Provide a one-line summary with maximum of 5 words that captures the key action or decision being made.
-        Do not mention what the architectured or models behind each step, consider it as confidential, consider the text will be demonstrated to possible competitors.
+        Guidelines for your response:
+        - Write a concise, one-line summary (maximum 10 words)
+        - Use natural, varied first-person expressions (e.g., "Looking through", "Currently exploring", "Just checking", "Let me", "Working on", "Searching for")
+        - Keep it active and present-focused
+        - Make it sound like you're talking to the user
+        - Avoid technical details about models or architecture
         """
 
         response = client.chat.completions.create(
@@ -113,7 +118,7 @@ def get_trace_summary(trace):
         return response.choices[0].message.content
     except Exception as e:
         logger.error(f"Error getting trace summary: {str(e)}")
-        return "Processing step"
+        return "Processing your request now"
 
 # Socket.IO event handlers
 @socketio.on('connect')
