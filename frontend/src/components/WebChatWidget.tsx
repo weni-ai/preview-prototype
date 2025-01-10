@@ -190,7 +190,7 @@ export function WebChatWidget({ iframeUrl }: WebChatWidgetProps) {
   const handlePlaceOrder = (items: any[]) => {
     const orderMessage = {
       items: items.map(item => ({
-        product_retailer_id: item.id,
+        id: item.id,
         quantity: item.quantity,
         item_price: parseFloat(item.price),
         currency: 'USD',

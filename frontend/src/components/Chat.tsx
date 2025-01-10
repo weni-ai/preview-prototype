@@ -177,6 +177,7 @@ export function Chat({ messages, onSendMessage, isLoading }: ChatProps) {
   const handlePlaceOrder = (items: any[]) => {
     const orderMessage = {
       items: items.map(item => ({
+        id: item.id,
         quantity: item.quantity,
         price: item.price,
         currency: item.currency,

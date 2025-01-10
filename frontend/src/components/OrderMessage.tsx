@@ -4,7 +4,7 @@ import { formatCurrency } from '../utils/currency';
 import { handleImageError } from '../utils/imageUtils';
 
 interface OrderItem {
-  product_retailer_id: string;
+  id: string;
   quantity: number;
   item_price: number;
   currency: string;
