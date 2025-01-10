@@ -305,7 +305,7 @@ export function Chat({ messages, onSendMessage, isLoading }: ChatProps) {
             initial={{ opacity: 0, x: -300 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 300 }}
-            className="flex flex-col flex-1"
+            className="flex flex-col flex-1 overflow-hidden"
           >
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
               {messages.map((message, index) => (
@@ -327,7 +327,7 @@ export function Chat({ messages, onSendMessage, isLoading }: ChatProps) {
               <div ref={messagesEndRef} />
             </div>
 
-            <div className="p-3 border-t bg-white rounded-b-xl">
+            <div className="flex-none p-3 border-t bg-white">
               <div className="flex gap-3 items-center">
                 <AudioRecorder onAudioRecorded={handleAudioRecorded} isLoading={isLoading} />
                 <ImageUploader 
