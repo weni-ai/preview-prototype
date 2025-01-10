@@ -3,10 +3,13 @@ import { handleImageError } from '../utils/imageUtils';
 
 interface Product {
   id: string;
-  name: string;
+  name?: string;
+  productName?: string;
+  brandName?: string;
   description: string;
   image: string;
   price: number;
+  sellerId: string;
 }
 
 interface CatalogPreviewProps {
@@ -24,7 +27,7 @@ export function CatalogPreview({ products, onViewCatalog }: CatalogPreviewProps)
       <div className="relative">
         <img
           src={previewProduct.image}
-          alt={previewProduct.name}
+          alt={previewProduct.name || previewProduct.productName}
           className="w-full h-48 object-cover"
           onError={handleImageError}
         />

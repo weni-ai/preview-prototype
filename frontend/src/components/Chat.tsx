@@ -16,10 +16,13 @@ const BACKEND_URL = (window as any).configs?.VITE_API_BASE_URL || import.meta.en
 
 interface Product {
   id: string;
-  name: string;
+  name?: string;
+  productName?: string;
+  brandName?: string;
   description: string;
   image: string;
   price: number;
+  sellerId: string;
 }
 
 interface ChatProps {
@@ -138,7 +141,11 @@ export function Chat({ messages, onSendMessage, isLoading }: ChatProps) {
         const fixedJsonStr = jsonStr
           .replace(/'/g, '"') // Replace single quotes with double quotes
           .replace(/([{,]\s*)(\w+):/g, '$1"$2":'); // Add quotes around property names
-        return JSON.parse(fixedJsonStr);
+        const products = JSON.parse(fixedJsonStr);
+        return products.map((product: any) => ({
+          ...product,
+          name: product.name || product.productName // Ensure name is set for compatibility
+        }));
       } catch (e) {
         console.error('Failed to parse product catalog:', e);
         return null;
@@ -216,6 +223,41 @@ export function Chat({ messages, onSendMessage, isLoading }: ChatProps) {
   const renderMessageContent = (message: Message) => {
     const processedText = replaceRedactedWithOrderForm(message.text);
     
+    // Check for product catalog first
+    const products = parseProductCatalog(processedText);
+    if (products) {
+      const textBeforeCatalog = processedText.split('<ProductCatalog>')[0].trim();
+      return (
+        <div className="space-y-3">
+          {textBeforeCatalog && (
+            <p className="text-base leading-relaxed whitespace-pre-wrap">{textBeforeCatalog}</p>
+          )}
+          <CatalogPreview
+            products={products}
+            onViewCatalog={() => {
+              setCurrentCatalogProducts(products);
+              setShowCatalog(true);
+            }}
+          />
+        </div>
+      );
+    }
+
+    // Check for order message
+    const order = parseOrderMessage(processedText);
+    if (order) {
+      return (
+        <OrderMessage
+          items={order.items}
+          onViewDetails={() => {
+            setSelectedOrder(order);
+            setShowOrderDetails(true);
+          }}
+        />
+      );
+    }
+
+    // Try to parse as JSON for special message types
     try {
       const content = JSON.parse(processedText);
       if (content.type === 'audio') {
@@ -271,39 +313,6 @@ export function Chat({ messages, onSendMessage, isLoading }: ChatProps) {
     if (urlButtonMatch) {
       const [_, text, buttonText, url] = urlButtonMatch;
       return <URLButton text={text.trim()} buttonText={buttonText} url={url} />;
-    }
-
-    const products = parseProductCatalog(processedText);
-    const order = parseOrderMessage(processedText);
-    
-    if (products) {
-      const textBeforeCatalog = processedText.split('<ProductCatalog>')[0].trim();
-      return (
-        <div className="space-y-3">
-          {textBeforeCatalog && (
-            <p className="text-base leading-relaxed whitespace-pre-wrap">{textBeforeCatalog}</p>
-          )}
-          <CatalogPreview
-            products={products}
-            onViewCatalog={() => {
-              setCurrentCatalogProducts(products);
-              setShowCatalog(true);
-            }}
-          />
-        </div>
-      );
-    }
-
-    if (order) {
-      return (
-        <OrderMessage
-          items={order.items}
-          onViewDetails={() => {
-            setSelectedOrder(order);
-            setShowOrderDetails(true);
-          }}
-        />
-      );
     }
 
     return <p className="text-base leading-relaxed whitespace-pre-wrap">{processedText}</p>;

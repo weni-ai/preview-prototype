@@ -60,10 +60,13 @@ interface WebChatWidgetProps {
 
 interface Product {
   id: string;
-  name: string;
+  name?: string;
+  productName?: string;
+  brandName?: string;
   description: string;
   image: string;
   price: number;
+  sellerId: string;
 }
 
 export function WebChatWidget({ iframeUrl }: WebChatWidgetProps) {
@@ -153,20 +156,17 @@ export function WebChatWidget({ iframeUrl }: WebChatWidgetProps) {
       const jsonStr = match[1].trim();
       if (!jsonStr) return null;
 
-      // Clean up the JSON string - replace single quotes with double quotes and fix missing commas
-      const cleanJsonStr = jsonStr
-        .replace(/'/g, '"')
-        .replace(/}(\s*){/g, '},{'); // Add missing commas between objects
+      // Clean up the JSON string - replace single quotes with double quotes
+      const fixedJsonStr = jsonStr
+        .replace(/'/g, '"') // Replace single quotes with double quotes
+        .replace(/([{,]\s*)(\w+):/g, '$1"$2":'); // Add quotes around property names
       
-      const products = JSON.parse(cleanJsonStr);
+      const products = JSON.parse(fixedJsonStr);
       if (!Array.isArray(products)) return null;
 
       return products.map((product: any) => ({
-        id: product.id || product.productId,
+        ...product,
         name: product.name || product.productName,
-        description: product.description,
-        image: product.image,
-        price: parseFloat(product.price) || 0,
         sellerId: product.sellerId || "default"
       }));
     } catch (e) {
@@ -344,6 +344,23 @@ export function WebChatWidget({ iframeUrl }: WebChatWidgetProps) {
     }
   };
 
+  const handleImageAnalyzed = (text: string, imageUrl: string) => {
+    if (text.trim() && !isLoading) {
+      handleSendMessage(JSON.stringify({
+        type: 'image',
+        text,
+        imageUrl
+      }));
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim() || isLoading) return;
+    await handleSendMessage(input);
+    setInput('');
+  };
+
   useEffect(() => {
     if (currentResponse && isLoading) {
       const processedResponse = replaceRedactedWithOrderForm(currentResponse);
@@ -372,6 +389,45 @@ export function WebChatWidget({ iframeUrl }: WebChatWidgetProps) {
   const renderMessageContent = (message: Message) => {
     const processedText = replaceRedactedWithOrderForm(message.text);
     
+    // Check for product catalog first
+    const products = parseProductCatalog(processedText);
+    if (products && products.length > 0) {
+      const [beforeCatalog, afterCatalog] = processedText.split(/<ProductCatalog>.*?<\/ProductCatalog>/s);
+      return (
+        <div className="space-y-3">
+          {beforeCatalog && (
+            <p className="text-base leading-relaxed whitespace-pre-wrap">{beforeCatalog.trim()}</p>
+          )}
+          <CatalogPreview
+            products={products}
+            onViewCatalog={() => handleViewCatalog(products)}
+          />
+          {afterCatalog && (
+            <p className="text-base leading-relaxed whitespace-pre-wrap">{afterCatalog.trim()}</p>
+          )}
+        </div>
+      );
+    }
+
+    // Check for order message
+    const order = parseOrderMessage(processedText);
+    if (order) {
+      return (
+        <OrderMessage
+          items={order.items}
+          onViewDetails={() => handleViewOrderDetails(order)}
+        />
+      );
+    }
+
+    // Check for URL button format
+    const urlButtonMatch = processedText.match(/(.*?)<URLButton>\[(.*?)\]\((.*?)\)<\/URLButton>/s);
+    if (urlButtonMatch) {
+      const [_, text, buttonText, url] = urlButtonMatch;
+      return <URLButton text={text.trim()} buttonText={buttonText} url={url} />;
+    }
+
+    // Try to parse as JSON for special message types
     try {
       const content = JSON.parse(processedText);
       if (content.type === 'audio') {
@@ -399,43 +455,6 @@ export function WebChatWidget({ iframeUrl }: WebChatWidgetProps) {
       }
     } catch (e) {
       // Not a special message type, continue with normal message handling
-    }
-
-    // Check for URL button format
-    const urlButtonMatch = processedText.match(/(.*?)<URLButton>\[(.*?)\]\((.*?)\)<\/URLButton>/s);
-    if (urlButtonMatch) {
-      const [_, text, buttonText, url] = urlButtonMatch;
-      return <URLButton text={text.trim()} buttonText={buttonText} url={url} />;
-    }
-
-    const products = parseProductCatalog(processedText);
-    const order = parseOrderMessage(processedText);
-    
-    if (products && products.length > 0) {
-      const [beforeCatalog, afterCatalog] = processedText.split(/<ProductCatalog>.*?<\/ProductCatalog>/s);
-      return (
-        <div className="space-y-3">
-          {beforeCatalog && (
-            <p className="text-base leading-relaxed whitespace-pre-wrap">{beforeCatalog.trim()}</p>
-          )}
-          <CatalogPreview
-            products={products}
-            onViewCatalog={() => handleViewCatalog(products)}
-          />
-          {afterCatalog && (
-            <p className="text-base leading-relaxed whitespace-pre-wrap">{afterCatalog.trim()}</p>
-          )}
-        </div>
-      );
-    }
-
-    if (order) {
-      return (
-        <OrderMessage
-          items={order.items}
-          onViewDetails={() => handleViewOrderDetails(order)}
-        />
-      );
     }
 
     // Function to convert text with URLs to JSX with clickable links
@@ -583,31 +602,32 @@ export function WebChatWidget({ iframeUrl }: WebChatWidgetProps) {
                     </div>
 
                     <div className="p-4 bg-[#1B1D21] border-t border-gray-800">
-                      <div className="flex items-center gap-2 bg-[#2A2D35] rounded-full p-2">
-                        <AudioRecorder onAudioRecorded={handleAudioRecorded} />
-                        <ImageUploader
+                      <div className="flex gap-3 items-center">
+                        <AudioRecorder onAudioRecorded={handleAudioRecorded} isLoading={isLoading} />
+                        <ImageUploader 
+                          onImageAnalyzed={handleImageAnalyzed}
                           onImageSelected={handleImageSelected}
                           shouldClear={shouldClearImage}
+                          isLoading={isLoading}
+                          isSending={false}
                         />
-                        <input
-                          type="text"
-                          value={input}
-                          onChange={(e) => setInput(e.target.value)}
-                          onKeyPress={(e) => {
-                            if (e.key === 'Enter' && !isLoading) {
-                              handleSendMessage(input);
-                            }
-                          }}
-                          placeholder="Type your message..."
-                          className="flex-1 bg-transparent border-none outline-none text-white placeholder-gray-400 px-2"
-                        />
-                        <button
-                          onClick={() => handleSendMessage(input)}
-                          disabled={!input.trim() || isLoading}
-                          className="p-2 rounded-full bg-[#00DED2] hover:bg-[#00C4BA] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          <Send className="w-6 h-6 text-white" />
-                        </button>
+                        <form onSubmit={handleSubmit} className="flex flex-1 gap-3">
+                          <input
+                            type="text"
+                            value={input}
+                            onChange={(e) => setInput(e.target.value)}
+                            placeholder="Type your message..."
+                            className="flex-1 bg-[#2A2D35] text-white placeholder-gray-400 rounded-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#00DED2]"
+                            disabled={isLoading}
+                          />
+                          <button
+                            type="submit"
+                            disabled={!input.trim() || isLoading}
+                            className="p-2 rounded-full bg-[#00DED2] hover:bg-[#00C4BA] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <Send className="w-6 h-6 text-white" />
+                          </button>
+                        </form>
                       </div>
                     </div>
                   </>
