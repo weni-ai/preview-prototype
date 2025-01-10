@@ -8,7 +8,8 @@ import { handleImageError } from '../utils/imageUtils';
 
 interface Product {
   id: string;
-  name: string;
+  name?: string;
+  productName?: string;
   description: string;
   image: string;
   price: number;
@@ -31,7 +32,7 @@ export function ProductCatalog({ products, onClose, onViewCart }: ProductCatalog
     if (delta > 0) {
       addToCart({
         id: product.id,
-        name: product.name,
+        name: product.name || product.productName,
         price: product.price,
         image: product.image,
         sellerId: product.sellerId
@@ -117,7 +118,7 @@ export function ProductCatalog({ products, onClose, onViewCart }: ProductCatalog
                       onError={handleImageError}
                     />
                     <div className="flex-1">
-                      <h3 className="font-medium">{product.name}</h3>
+                      <h3 className="font-medium">{product.name || product.productName}</h3>
                       <p className="text-sm text-gray-600 line-clamp-2">{product.description}</p>
                       <div className="flex items-baseline gap-2 mt-1">
                         <p className="text-[#00DED2] font-semibold">{formatCurrency(product.price)}</p>
