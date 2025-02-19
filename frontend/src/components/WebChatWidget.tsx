@@ -150,18 +150,12 @@ export function WebChatWidget({ iframeUrl }: WebChatWidgetProps) {
 
   const parseProductCatalog = (text: string): Product[] | null => {
     try {
-      const match = text.match(/<ProductCatalog>(.*?)<\/ProductCatalog>/s);
+      const match = text.match(/<ProductCatalog>\[(.*?)\]<\/ProductCatalog>/s);
       if (!match) return null;
 
-      const jsonStr = match[1].trim();
-      if (!jsonStr) return null;
-
-      // Clean up the JSON string - replace single quotes with double quotes
-      const fixedJsonStr = jsonStr
-        .replace(/'/g, '"') // Replace single quotes with double quotes
-        .replace(/([{,]\s*)(\w+):/g, '$1"$2":'); // Add quotes around property names
+      const jsonStr = `[${match[1].trim()}]`;
+      const products = JSON.parse(jsonStr);
       
-      const products = JSON.parse(fixedJsonStr);
       if (!Array.isArray(products)) return null;
 
       return products.map((product: any) => ({

@@ -133,25 +133,24 @@ export function Chat({ messages, onSendMessage, isLoading }: ChatProps) {
   };
 
   const parseProductCatalog = (text: string): Product[] | null => {
-    const match = text.match(/<ProductCatalog>(.*?)<\/ProductCatalog>/s);
-    if (match) {
-      try {
-        const jsonStr = match[1].trim();
-        // Fix common JSON formatting issues
-        const fixedJsonStr = jsonStr
-          .replace(/'/g, '"') // Replace single quotes with double quotes
-          .replace(/([{,]\s*)(\w+):/g, '$1"$2":'); // Add quotes around property names
-        const products = JSON.parse(fixedJsonStr);
-        return products.map((product: any) => ({
-          ...product,
-          name: product.name || product.productName // Ensure name is set for compatibility
-        }));
-      } catch (e) {
-        console.error('Failed to parse product catalog:', e);
-        return null;
-      }
+    try {
+      const match = text.match(/<ProductCatalog>\[(.*?)\]<\/ProductCatalog>/s);
+      if (!match) return null;
+
+      const jsonStr = `[${match[1].trim()}]`;
+      const products = JSON.parse(jsonStr);
+      
+      if (!Array.isArray(products)) return null;
+
+      return products.map((product: any) => ({
+        ...product,
+        name: product.name || product.productName,
+        sellerId: product.sellerId || "default"
+      }));
+    } catch (e) {
+      console.error('Failed to parse product catalog:', e);
+      return null;
     }
-    return null;
   };
 
   const parseOrderMessage = (text: string): any | null => {
