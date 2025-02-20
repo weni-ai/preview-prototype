@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Play, Pause } from 'lucide-react';
+import { Send, Play, Pause, Eye, EyeOff } from 'lucide-react';
 import type { Message } from '../types';
 import { CatalogPreview } from './CatalogPreview';
 import { ProductCatalog } from './ProductCatalog';
@@ -27,7 +27,7 @@ interface Product {
 
 interface ChatProps {
   messages: Message[];
-  onSendMessage: (message: string) => void;
+  onSendMessage: (message: string, skipTraceSummary?: boolean) => void;
   isLoading: boolean;
 }
 
@@ -46,6 +46,7 @@ export function Chat({ messages, onSendMessage, isLoading }: ChatProps) {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [shouldClearImage, setShouldClearImage] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [skipTraceSummary, setSkipTraceSummary] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [playingAudio, setPlayingAudio] = useState<string | null>(null);
   const audioRefs = useRef<{ [key: string]: HTMLAudioElement }>({});
@@ -83,7 +84,7 @@ export function Chat({ messages, onSendMessage, isLoading }: ChatProps) {
             text: input.trim(),
             imageUrl: `${BACKEND_URL}${data.imageUrl}`,
             imageAnalysis: data.text
-          }));
+          }), skipTraceSummary);
           // Clear inputs only after successful analysis
           setSelectedImage(null);
           setInput('');
@@ -97,7 +98,7 @@ export function Chat({ messages, onSendMessage, isLoading }: ChatProps) {
         setIsSending(false);
       }
     } else if (input.trim()) {
-      onSendMessage(input);
+      onSendMessage(input, skipTraceSummary);
       setInput('');
       setIsSending(false);
     } else {
@@ -111,7 +112,7 @@ export function Chat({ messages, onSendMessage, isLoading }: ChatProps) {
         type: 'audio',
         text,
         audioUrl
-      }));
+      }), skipTraceSummary);
     }
   };
 
@@ -197,7 +198,7 @@ export function Chat({ messages, onSendMessage, isLoading }: ChatProps) {
       timestamp: new Date().toISOString(),
       total: items.reduce((sum, item) => sum + (item.quantity * item.price), 0)
     };
-    onSendMessage(`<Order>${JSON.stringify(orderMessage)}</Order>`);
+    onSendMessage(`<Order>${JSON.stringify(orderMessage)}</Order>`, skipTraceSummary);
   };
 
   const handleImageAnalyzed = (text: string, imageUrl: string) => {
@@ -206,7 +207,7 @@ export function Chat({ messages, onSendMessage, isLoading }: ChatProps) {
         type: 'image',
         text,
         imageUrl
-      }));
+      }), skipTraceSummary);
     }
   };
 
@@ -387,6 +388,17 @@ export function Chat({ messages, onSendMessage, isLoading }: ChatProps) {
 
               <div className="flex-none p-3 border-t bg-white">
                 <div className="flex gap-3 items-center">
+                  <button
+                    onClick={() => setSkipTraceSummary(!skipTraceSummary)}
+                    className={`p-2 rounded-full transition-colors ${
+                      skipTraceSummary 
+                        ? 'bg-gray-200 text-gray-600' 
+                        : 'bg-[#00DED2]/10 text-[#00DED2]'
+                    }`}
+                    title={skipTraceSummary ? "Enable trace summary" : "Disable trace summary"}
+                  >
+                    {skipTraceSummary ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
                   <AudioRecorder onAudioRecorded={handleAudioRecorded} isLoading={isLoading} />
                   <ImageUploader 
                     onImageAnalyzed={handleImageAnalyzed} 

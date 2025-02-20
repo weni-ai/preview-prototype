@@ -112,7 +112,7 @@ function MainApp() {
     };
   }, [BACKEND_URL, sessionId]);
 
-  const handleSendMessage = async (message: string) => {
+  const handleSendMessage = async (message: string, skipTraceSummary = false) => {
     setIsLoading(true);
     setMessages(prev => [...prev, { type: 'user', text: message }]);
     setTraces([]); // Clear previous traces
@@ -129,7 +129,8 @@ function MainApp() {
         credentials: 'include',
         body: JSON.stringify({
           message,
-          sessionId: sessionId // Use the timestamp-based session ID
+          sessionId: sessionId,
+          skip_trace_summary: skipTraceSummary
         }),
       });
 
@@ -232,21 +233,27 @@ function MainApp() {
                 </motion.div>
               ) : (
                 <div className="flex-1 overflow-auto p-4">
-                  {traces.map((trace, index) => (
-                    <AgentNode
-                      key={index}
-                      type={trace.type === 'PRE_PROCESSING' ? 'Pre-processing' :
-                           trace.type === 'ORCHESTRATION' ? 'Orchestration' :
-                           trace.type === 'POST_PROCESSING' ? 'Post-processing' :
-                           trace.type === 'error' ? 'Error' : 'Processing'}
-                      status={index === traces.length - 1 ? 'active' : 'completed'}
-                      summary={trace.summary || 'Processing...'}
-                      details={trace}
-                      isExpanded={expandedTraces.has(index)}
-                      onToggle={() => toggleTrace(index)}
-                      onCopy={() => copyTrace(trace)}
-                    />
-                  ))}
+                  {traces.length > 0 ? (
+                    traces.map((trace, index) => (
+                      <AgentNode
+                        key={index}
+                        type={trace.type === 'PRE_PROCESSING' ? 'Pre-processing' :
+                             trace.type === 'ORCHESTRATION' ? 'Orchestration' :
+                             trace.type === 'POST_PROCESSING' ? 'Post-processing' :
+                             trace.type === 'error' ? 'Error' : 'Processing'}
+                        status={index === traces.length - 1 ? 'active' : 'completed'}
+                        summary={trace.summary || 'Processing...'}
+                        details={trace}
+                        isExpanded={expandedTraces.has(index)}
+                        onToggle={() => toggleTrace(index)}
+                        onCopy={() => copyTrace(trace)}
+                      />
+                    ))
+                  ) : (
+                    <div className="text-center text-gray-500 mt-8">
+                      No logs available. Start a conversation to see the logs.
+                    </div>
+                  )}
                 </div>
               )}
             </div>

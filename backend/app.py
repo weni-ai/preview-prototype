@@ -243,7 +243,7 @@ def chat():
             agentAliasId=agent_alias,
             sessionId=session_id,
             inputText=input_text,
-            enableTrace=not skip_trace_summary,
+            enableTrace=True,  # Always enable trace
             sessionState={
                 'knowledgeBaseConfigurations': [
                     {
@@ -265,7 +265,7 @@ def chat():
                 # Emit the chunk in real-time to specific session room
                 logger.info(f"Emitting response chunk to session {session_id}")
                 socketio.emit('response_chunk', {'content': content}, room=session_id)
-            elif 'trace' in event and not skip_trace_summary:
+            elif 'trace' in event:
                 trace_data = event['trace']
                 if 'type' in trace_data:
                     formatted_trace = {
@@ -285,13 +285,22 @@ def chat():
                     elif trace_data['type'] == 'POST_PROCESSING':
                         formatted_trace['modelInvocationOutput'] = trace_data.get('modelInvocationOutput', {})
                     
-                    # Get summary from Claude
-                    formatted_trace['summary'] = get_trace_summary(trace_data)
+                    # Only generate summary if not skipped
+                    if not skip_trace_summary:
+                        formatted_trace['summary'] = get_trace_summary(trace_data)
+                    else:
+                        formatted_trace['summary'] = 'Processing...'  # Default message when summaries are disabled
+                    
                     # Emit the trace in real-time to specific session room
                     logger.info(f"Emitting trace update to session {session_id}")
                     socketio.emit('trace_update', {'trace': formatted_trace}, room=session_id)
                 else:
-                    trace_data['summary'] = get_trace_summary(trace_data)
+                    # For untyped traces
+                    if not skip_trace_summary:
+                        trace_data['summary'] = get_trace_summary(trace_data)
+                    else:
+                        trace_data['summary'] = 'Processing...'  # Default message when summaries are disabled
+                    
                     # Emit the trace in real-time to specific session room
                     logger.info(f"Emitting trace update to session {session_id}")
                     socketio.emit('trace_update', {'trace': trace_data}, room=session_id)
