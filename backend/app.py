@@ -151,6 +151,51 @@ def get_collaborator_description(collaborator_name: str, instruction: str) -> st
         logger.error(f"Error getting collaborator description: {str(e)}")
         return "Team member"
 
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
+def improve_rationale_text(rationale_text: str) -> str:
+    try:
+        prompt = f"""
+        Transform this internal rationale into a brief, natural follow-up message while keeping the original language.
+
+        Original rationale:
+        {rationale_text}
+
+        Guidelines for your response:
+        - Return only the raw text without any quotes or formatting
+        - Keep the same language as the original text
+        - Make it very short and direct (max 15 words)
+        - Skip conversation starters like "Entendo que", "Hey!", "Deixa eu"
+        - Focus only on what you're doing right now
+        - Use active voice and present tense
+        - Keep technical details minimal
+        - Sound natural but professional
+        - Do not wrap the response in quotes
+
+        Example transformations (in Portuguese):
+        Original: Necessário consultar base de dados de produtos com filtros para roupas formais e processar resultados para disponibilidade de tamanhos
+        Better: Buscando roupas formais disponíveis no seu tamanho.
+
+        Original: Para atender à solicitação, precisarei buscar roupas adequadas para o Carnaval que sejam apropriadas para um jovem profissional
+        Better: Procurando fantasias de Carnaval adequadas para ambiente profissional.
+
+        Remember: Return only the transformed text without any quotes or additional formatting.
+        """
+
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            max_tokens=150,
+            messages=[{
+                "role": "user",
+                "content": prompt
+            }]
+        )
+        
+        # Remove any quotes from the response
+        return response.choices[0].message.content.strip().strip('"\'')
+    except Exception as e:
+        logger.error(f"Error improving rationale text: {str(e)}")
+        return rationale_text  # Return original text if transformation fails
+
 # Socket.IO event handlers
 @socketio.on('connect')
 def handle_connect():
@@ -274,10 +319,12 @@ def chat():
                 if 'trace' in trace_data and 'orchestrationTrace' in trace_data['trace']:
                     rationale = trace_data['trace']['orchestrationTrace'].get('rationale', {})
                     if rationale and 'text' in rationale:
-                        logger.info(f"Found rationale text: {rationale['text']}")
-                        # Emit the rationale text as a response chunk
-                        logger.info(f"Emitting rationale as response chunk to session {session_id}")
-                        socketio.emit('response_chunk', {'content': rationale['text']}, room=session_id)
+                        # Improve the rationale text before emitting
+                        improved_text = improve_rationale_text(rationale['text'])
+                        logger.info(f"Improved rationale text: {improved_text}")
+                        # Emit the improved text as a response chunk
+                        logger.info(f"Emitting improved rationale as response chunk to session {session_id}")
+                        socketio.emit('response_chunk', {'content': improved_text}, room=session_id)
 
                 # Continue with the existing trace type handling
                 if 'type' in trace_data:
