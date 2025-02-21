@@ -3,6 +3,14 @@ export interface Message {
   type: 'user' | 'assistant';
 }
 
+export interface Trace {
+  type: string;
+  summary: string;
+  modelInvocationOutput?: any;
+  modelInvocationInput?: any;
+  failureReason?: string;
+}
+
 export interface Product {
   id: string;
   name: string;

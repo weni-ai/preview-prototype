@@ -75,7 +75,6 @@ export function WebChatWidget({ iframeUrl }: WebChatWidgetProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [input, setInput] = useState('');
   const [socket, setSocket] = useState<Socket | null>(null);
-  const [currentResponse, setCurrentResponse] = useState('');
   const [showCatalog, setShowCatalog] = useState(false);
   const [showCart, setShowCart] = useState(false);
   const [showOrderDetails, setShowOrderDetails] = useState(false);
@@ -132,7 +131,15 @@ export function WebChatWidget({ iframeUrl }: WebChatWidgetProps) {
 
       socket.on('response_chunk', (data: { content: string }) => {
         console.log('Received chunk in session', sessionId, ':', data);
-        setCurrentResponse(prev => prev + data.content);
+        setMessages(prev => {
+          const lastMessage = prev[prev.length - 1];
+          // Create a new message for each chunk
+          return [...prev, {
+            text: data.content,
+            type: 'assistant',
+            role: 'assistant'
+          }];
+        });
       });
 
       setSocket(socket);
@@ -241,7 +248,6 @@ export function WebChatWidget({ iframeUrl }: WebChatWidgetProps) {
     if (!message.trim()) return;
     
     setIsLoading(true);
-    setCurrentResponse('');
     setMessages(prev => [...prev, { text: message, type: 'user', role: 'user' }]);
     setInput('');
 
@@ -356,8 +362,8 @@ export function WebChatWidget({ iframeUrl }: WebChatWidgetProps) {
   };
 
   useEffect(() => {
-    if (currentResponse && isLoading) {
-      const processedResponse = replaceRedactedWithOrderForm(currentResponse);
+    if (messages.length > 0 && isLoading) {
+      const processedResponse = replaceRedactedWithOrderForm(messages[messages.length - 1].text);
       const products = parseProductCatalog(processedResponse);
       const order = parseOrderMessage(processedResponse);
 
@@ -378,7 +384,7 @@ export function WebChatWidget({ iframeUrl }: WebChatWidgetProps) {
         }];
       });
     }
-  }, [currentResponse, isLoading]);
+  }, [messages, isLoading]);
 
   const renderMessageContent = (message: Message) => {
     const processedText = replaceRedactedWithOrderForm(message.text);
@@ -578,14 +584,7 @@ export function WebChatWidget({ iframeUrl }: WebChatWidgetProps) {
                           </div>
                         </div>
                       ))}
-                      {isLoading && currentResponse && (
-                        <div className="text-left mb-4">
-                          <div className="inline-block rounded-lg px-4 py-2 bg-[#2A2D35] text-white">
-                            {currentResponse}
-                          </div>
-                        </div>
-                      )}
-                      {isLoading && !currentResponse && (
+                      {isLoading && (
                         <div className="text-left mb-4">
                           <div className="inline-block rounded-lg px-4 py-2 bg-[#2A2D35] text-white min-w-[60px]">
                             <TypingAnimation />

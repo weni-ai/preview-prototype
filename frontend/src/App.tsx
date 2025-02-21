@@ -80,17 +80,11 @@ function MainApp() {
       socket.on('response_chunk', (data: { content: string }) => {
         console.log('Received chunk in session', sessionId, ':', data);
         setMessages(prev => {
-          const lastMessage = prev[prev.length - 1];
-          if (lastMessage?.type === 'assistant') {
-            return [
-              ...prev.slice(0, -1),
-              {
-                ...lastMessage,
-                text: lastMessage.text + data.content
-              }
-            ];
-          }
-          return prev;
+          // Create a new message for each chunk
+          return [...prev, {
+            type: 'assistant',
+            text: data.content
+          }];
         });
       });
 
@@ -118,9 +112,6 @@ function MainApp() {
     setTraces([]); // Clear previous traces
 
     try {
-      // Initialize an empty assistant message that will be updated in real-time
-      setMessages(prev => [...prev, { type: 'assistant', text: '' }]);
-
       const response = await fetch(`${BACKEND_URL}/api/chat`, {
         method: 'POST',
         headers: {
@@ -137,8 +128,6 @@ function MainApp() {
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-
-      // The final message and traces will be updated through WebSocket events
     } catch (error) {
       console.error('Error:', error);
       const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
