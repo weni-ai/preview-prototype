@@ -267,6 +267,19 @@ def chat():
                 socketio.emit('response_chunk', {'content': content}, room=session_id)
             elif 'trace' in event:
                 trace_data = event['trace']
+                # Debug the trace structure
+                logger.info(f"Received trace: {json.dumps(trace_data, indent=2)}")
+
+                # Check if this is a trace with orchestrationTrace
+                if 'trace' in trace_data and 'orchestrationTrace' in trace_data['trace']:
+                    rationale = trace_data['trace']['orchestrationTrace'].get('rationale', {})
+                    if rationale and 'text' in rationale:
+                        logger.info(f"Found rationale text: {rationale['text']}")
+                        # Emit the rationale text as a response chunk
+                        logger.info(f"Emitting rationale as response chunk to session {session_id}")
+                        socketio.emit('response_chunk', {'content': rationale['text']}, room=session_id)
+
+                # Continue with the existing trace type handling
                 if 'type' in trace_data:
                     formatted_trace = {
                         'type': trace_data['type'],
