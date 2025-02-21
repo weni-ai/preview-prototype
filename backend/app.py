@@ -155,30 +155,72 @@ def get_collaborator_description(collaborator_name: str, instruction: str) -> st
 def improve_rationale_text(rationale_text: str) -> str:
     try:
         prompt = f"""
-        Transform this internal rationale into a brief, natural follow-up message while keeping the original language.
+        Analyze this internal rationale and transform it into a brief, natural follow-up message OR mark it as invalid.
 
         Original rationale:
         {rationale_text}
 
-        Guidelines for your response:
-        - Return only the raw text without any quotes or formatting
-        - Keep the same language as the original text
-        - Make it very short and direct (max 15 words)
-        - Skip conversation starters like "Entendo que", "Hey!", "Deixa eu"
-        - Focus only on what you're doing right now
-        - Use active voice and present tense
-        - Keep technical details minimal
-        - Sound natural but professional
-        - Never make questions or use question marks
-        - Always make statements, not questions
-        - Use declarative sentences only
-        - Avoid repeating words, especially verbs like "buscando", "procurando"
-        - Use diverse vocabulary for similar actions
-        - Do not wrap the response in quotes
+        IMPORTANT RULES:
+        1. If the rationale matches ANY of these criteria, return EXACTLY "invalid":
+           - Greetings or welcomes
+           - Basic assistance offers
+           - Starting/initializing processes
+           - Basic verifications
+           - Simple acknowledgments
+           - Generic analysis statements
+           - Contains ANY mention of "ProductConcierge" (this is an internal agent name)
+           - Contains ANY technical terms (API, service, system, database, etc)
+           - Contains ANY reference to internal processes
+           - Mentions consulting or accessing internal components
+           - Contains user names or personal identifiers
+           RETURN EXACTLY "invalid" (without quotes)
 
-        Example transformations (in Portuguese):
-        Original: Necessário consultar base de dados de produtos com filtros para roupas formais e processar resultados para disponibilidade de tamanhos
-        Better: Analisando roupas formais disponíveis no seu tamanho.
+        2. Otherwise, if the rationale contains meaningful information, transform it following these guidelines:
+           - Return only the raw text without any quotes or formatting
+           - Keep the same language as the original text
+           - Make it very short and direct (max 15 words)
+           - Skip conversation starters like "Entendo que", "Hey!", "Deixa eu"
+           - Focus only on what you're doing right now
+           - Use active voice and present tense
+           - Keep technical details minimal
+           - Sound natural but professional
+           - Never make questions or use question marks
+           - Always make statements, not questions
+           - Use declarative sentences only
+           - Avoid repeating words, especially verbs like "buscando", "procurando"
+           - Use diverse vocabulary for similar actions
+           - NEVER mention ProductConcierge - transform these into direct actions about what's being done
+           - NEVER include user names or personal identifiers
+           - Focus on the ACTION being done, not HOW it's being done
+
+        Examples:
+
+        Basic/Invalid rationales that should return "invalid":
+        - "Dando as boas-vindas e oferecendo assistência ao usuário"
+        - "Processando a solicitação do usuário"
+        - "Analisando a entrada do usuário para fornecer uma resposta adequada"
+        - "Preparando para responder à solicitação"
+        - "Entendendo o contexto da conversa"
+        - "Avaliando a mensagem recebida"
+        - "Iniciando o processo de resposta"
+        - "Gerando uma resposta apropriada"
+        - "Verificando as informações fornecidas"
+        - "Processando o pedido de assistência"
+        - "Consultando o ProductConcierge sobre sugestões de roupas"
+        - "Utilizando o sistema de recomendação para buscar opções"
+        - "Acessando a base de conhecimento para encontrar informações"
+        - "Consultando o serviço de produtos para verificar disponibilidade"
+        - "Acionando o sistema de busca para encontrar alternativas"
+        - "Consultando o ProductConcierge para sugestões de roupas de Carnaval para Léo"
+        - "Buscando no sistema recomendações para João"
+        - "Acessando API de produtos para Maria"
+
+        Valid rationales that should be transformed:
+        Original: Consultando o ProductConcierge sobre sugestões de roupas formais
+        Better: Buscando roupas formais para você.
+
+        Original: ProductConcierge está analisando opções de fantasias de Carnaval
+        Better: Analisando opções de fantasias de Carnaval.
 
         Original: Para atender à solicitação, precisarei buscar roupas adequadas para o Carnaval que sejam apropriadas para um jovem profissional
         Better: Selecionando fantasias de Carnaval para ambiente profissional.
@@ -189,7 +231,10 @@ def improve_rationale_text(rationale_text: str) -> str:
         Original: Que tal procurarmos por roupas mais casuais?
         Better: Explorando alternativas mais casuais agora.
 
-        Remember: Return only the transformed text without any quotes or additional formatting. Never use questions in the response. Use varied vocabulary.
+        Original: ProductConcierge está buscando sugestões de roupas de Carnaval
+        Better: Buscando sugestões de fantasias para o Carnaval.
+
+        Remember: For invalid rationales, return EXACTLY "invalid". For valid ones, return only the transformed text without any quotes or additional formatting. NEVER mention ProductConcierge - always transform it into a direct action.
         """
 
         response = client.chat.completions.create(
@@ -356,9 +401,11 @@ def chat():
                         # Improve the rationale text before emitting
                         improved_text = improve_rationale_text(rationale['text'])
                         logger.info(f"Improved rationale text: {improved_text}")
-                        # Emit the improved text as a response chunk
-                        logger.info(f"Emitting improved rationale as response chunk to session {session_id}")
-                        socketio.emit('response_chunk', {'content': improved_text}, room=session_id)
+                        # Only emit if not marked as invalid
+                        if improved_text != "invalid":
+                            # Emit the improved text as a response chunk
+                            logger.info(f"Emitting improved rationale as response chunk to session {session_id}")
+                            socketio.emit('response_chunk', {'content': improved_text}, room=session_id)
 
                 # Continue with the existing trace type handling
                 if 'type' in trace_data:
