@@ -169,16 +169,27 @@ def improve_rationale_text(rationale_text: str) -> str:
         - Use active voice and present tense
         - Keep technical details minimal
         - Sound natural but professional
+        - Never make questions or use question marks
+        - Always make statements, not questions
+        - Use declarative sentences only
+        - Avoid repeating words, especially verbs like "buscando", "procurando"
+        - Use diverse vocabulary for similar actions
         - Do not wrap the response in quotes
 
         Example transformations (in Portuguese):
         Original: Necessário consultar base de dados de produtos com filtros para roupas formais e processar resultados para disponibilidade de tamanhos
-        Better: Buscando roupas formais disponíveis no seu tamanho.
+        Better: Analisando roupas formais disponíveis no seu tamanho.
 
         Original: Para atender à solicitação, precisarei buscar roupas adequadas para o Carnaval que sejam apropriadas para um jovem profissional
-        Better: Procurando fantasias de Carnaval adequadas para ambiente profissional.
+        Better: Selecionando fantasias de Carnaval para ambiente profissional.
 
-        Remember: Return only the transformed text without any quotes or additional formatting.
+        Original: Posso te ajudar a encontrar algo mais específico?
+        Better: Refinando opções mais específicas para você.
+
+        Original: Que tal procurarmos por roupas mais casuais?
+        Better: Explorando alternativas mais casuais agora.
+
+        Remember: Return only the transformed text without any quotes or additional formatting. Never use questions in the response. Use varied vocabulary.
         """
 
         response = client.chat.completions.create(
@@ -187,7 +198,9 @@ def improve_rationale_text(rationale_text: str) -> str:
             messages=[{
                 "role": "user",
                 "content": prompt
-            }]
+            }],
+            frequency_penalty=1.8,  # High frequency penalty to discourage word repetition
+            presence_penalty=1.2    # High presence penalty to encourage diverse vocabulary
         )
         
         # Remove any quotes from the response
@@ -195,6 +208,27 @@ def improve_rationale_text(rationale_text: str) -> str:
     except Exception as e:
         logger.error(f"Error improving rationale text: {str(e)}")
         return rationale_text  # Return original text if transformation fails
+
+def format_trace_type(trace_type: str) -> str:
+    """
+    Formats a camelCase string by splitting it into words and capitalizing the first letter.
+    Example: 'orchestrationTrace' becomes 'Orchestration Trace'
+    """
+    if not trace_type:
+        return 'Unknown Trace Type'
+        
+    words = []
+    current_word = trace_type[0].upper()
+    
+    for char in trace_type[1:]:
+        if char.isupper():
+            words.append(current_word)
+            current_word = char
+        else:
+            current_word += char
+    
+    words.append(current_word)
+    return " ".join(words)
 
 # Socket.IO event handlers
 @socketio.on('connect')
@@ -349,7 +383,12 @@ def chat():
                     if not skip_trace_summary:
                         formatted_trace['summary'] = get_trace_summary(trace_data)
                     else:
-                        formatted_trace['summary'] = 'Processing...'  # Default message when summaries are disabled
+                        # Get the first key under 'trace' if it exists
+                        if 'trace' in trace_data and isinstance(trace_data['trace'], dict):
+                            trace_keys = list(trace_data['trace'].keys())
+                            formatted_trace['summary'] = format_trace_type(trace_keys[0]) if trace_keys else 'Unknown Trace Type'
+                        else:
+                            formatted_trace['summary'] = 'Unknown Trace Type'
                     
                     # Emit the trace in real-time to specific session room
                     logger.info(f"Emitting trace update to session {session_id}")
@@ -359,7 +398,12 @@ def chat():
                     if not skip_trace_summary:
                         trace_data['summary'] = get_trace_summary(trace_data)
                     else:
-                        trace_data['summary'] = 'Processing...'  # Default message when summaries are disabled
+                        # Get the first key under 'trace' if it exists
+                        if 'trace' in trace_data and isinstance(trace_data['trace'], dict):
+                            trace_keys = list(trace_data['trace'].keys())
+                            trace_data['summary'] = format_trace_type(trace_keys[0]) if trace_keys else 'Unknown Trace Type'
+                        else:
+                            trace_data['summary'] = 'Unknown Trace Type'
                     
                     # Emit the trace in real-time to specific session room
                     logger.info(f"Emitting trace update to session {session_id}")
