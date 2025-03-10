@@ -412,16 +412,13 @@ def chat():
                     caller_chain = trace_data['callerChain']
                     # Check if callerChain is a list with more than one entry
                     if isinstance(caller_chain, list) and len(caller_chain) > 1:
-                        # # Improve and emit the rationale for the first time
-                        # improved_text = improve_rationale_text(first_rationale_text)
-                        # logger.info(f"Improved first rationale text with multiple agents: {improved_text}")
+                        # Improve and emit the rationale for the first time
+                        improved_text = improve_rationale_text(first_rationale_text)
+                        logger.info(f"Improved first rationale text with multiple agents: {improved_text}")
                         
                         # if improved_text != "invalid":
-                        #     logger.info(f"Emitting first improved rationale to session {session_id}")
-                        #     socketio.emit('response_chunk', {'content': improved_text}, room=session_id)
-
                         logger.info(f"Emitting first improved rationale to session {session_id}")
-                        socketio.emit('response_chunk', {'content': first_rationale_text}, room=session_id)
+                        socketio.emit('response_chunk', {'content': f"{improved_text} ({first_rationale_text})"}, room=session_id)
 
                         first_rationale_text = None
 
@@ -435,17 +432,13 @@ def chat():
                             first_rationale_text = rationale['text']
                             is_first_rationale = False
                         else:
-                            # # For subsequent rationales, keep the current logic
-                            # improved_text = improve_rationale_text(rationale['text'])
-                            # logger.info(f"Improved subsequent rationale text: {improved_text}")
+                            # For subsequent rationales, keep the current logic
+                            improved_text = improve_rationale_text(rationale['text'])
+                            logger.info(f"Improved subsequent rationale text: {improved_text}")
                             
                             # if improved_text != "invalid":
-                            #     logger.info(f"Emitting improved rationale as response chunk to session {session_id}")
-                            #     socketio.emit('response_chunk', {'content': improved_text}, room=session_id)
-
-                            # For subsequent rationales, keep the current logic
                             logger.info(f"Emitting improved rationale as response chunk to session {session_id}")
-                            socketio.emit('response_chunk', {'content': rationale['text']}, room=session_id)
+                            socketio.emit('response_chunk', {'content': f"{improved_text} ({rationale['text']})"}, room=session_id)
 
                 # Continue with the existing trace type handling
                 if 'type' in trace_data:
