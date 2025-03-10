@@ -165,12 +165,34 @@ def get_collaborator_description(collaborator_name: str, instruction: str) -> st
         return "Team member"
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
-def improve_rationale_text(rationale_text: str) -> str:
+def improve_rationale_text(rationale_text: str, previous_rationales: list = [], user_input: str = "") -> str:
     try:
+        # Prepare previous rationales prompt section
+        previous_rationales_text = ""
+        if previous_rationales:
+            previous_rationales_text = "Previous rationales:\n" + "\n".join(f"- {r}" for r in previous_rationales) + "\n\n"
+
+            print(f"Previous Rationales: {previous_rationales}")
+        
+        # Include user input context if provided
+        user_context = ""
+        if user_input:
+            user_context = f"""
+        User's current message:
+        "{user_input}"
+        
+        Based on this user message, provide a rationale that is:
+        - Directly relevant to what the user is asking about
+        - Using similar language style and terminology as the user
+        - Addressing the specific topic or request mentioned
+        - Maintaining appropriate tone (formal/informal) based on user's style
+        
+        """
+        
         prompt = f"""
         Analyze this internal rationale and transform it into a brief, natural follow-up message OR mark it as invalid.
 
-        Original rationale:
+        {user_context}{previous_rationales_text}Original rationale:
         {rationale_text}
 
         IMPORTANT RULES:
@@ -186,6 +208,7 @@ def improve_rationale_text(rationale_text: str) -> str:
            - Contains ANY reference to internal processes
            - Mentions consulting or accessing internal components
            - Contains user names or personal identifiers
+           - Is VERY SIMILAR to any of the previous rationales (to avoid redundancy)
            RETURN EXACTLY "invalid" (without quotes)
 
         2. Otherwise, if the rationale contains meaningful information, transform it following these guidelines:
@@ -205,6 +228,11 @@ def improve_rationale_text(rationale_text: str) -> str:
            - NEVER mention ProductConcierge - transform these into direct actions about what's being done
            - NEVER include user names or personal identifiers
            - Focus on the ACTION being done, not HOW it's being done
+           - Make sure the message feels like a CONTINUATION of previous rationales, not repetitive
+           - Consider the user's specific request or query in the current message
+           - Match the tone and language style of the user when appropriate
+           - Reference specific elements or topics from the user's input when relevant
+           - Prioritize addressing what the user is actually asking about
 
         Examples:
 
@@ -246,6 +274,11 @@ def improve_rationale_text(rationale_text: str) -> str:
 
         Original: ProductConcierge está buscando sugestões de roupas de Carnaval
         Better: Buscando sugestões de fantasias para o Carnaval.
+
+        Example with user input context:
+        User input: "Preciso de ideias para fantasias de Carnaval que sejam confortáveis para uma festa ao ar livre"
+        Original: Consultando o ProductConcierge para encontrar fantasias de Carnaval adequadas para uma festa externa
+        Better: Selecionando fantasias confortáveis para festa de Carnaval ao ar livre.
 
         Remember: For invalid rationales, return EXACTLY "invalid". For valid ones, return only the transformed text without any quotes or additional formatting. NEVER mention ProductConcierge - always transform it into a direct action.
         """
@@ -353,6 +386,9 @@ def chat():
         message = str(raw_message)
         input_text = message
 
+        # Create a list to store rationales for this interaction
+        rationale_history = []
+
         # Only try to parse as JSON if it looks like a JSON object or array
         if message.startswith('{') or message.startswith('['):
             try:
@@ -439,10 +475,12 @@ def chat():
                     # Check if callerChain is a list with more than one entry
                     if isinstance(caller_chain, list) and len(caller_chain) > 1:
                         # Improve and emit the rationale for the first time
-                        improved_text = improve_rationale_text(first_rationale_text)
+                        improved_text = improve_rationale_text(first_rationale_text, rationale_history, input_text)
                         logger.info(f"Improved first rationale text with multiple agents: {improved_text}")
                         
-                        # if improved_text != "invalid":
+                        if improved_text != "invalid":
+                            rationale_history.append(improved_text)
+
                         logger.info(f"Emitting first improved rationale to session {session_id}")
                         socketio.emit('response_chunk', {'content': f"{improved_text} ({first_rationale_text})"}, room=session_id)
 
@@ -458,11 +496,13 @@ def chat():
                             first_rationale_text = rationale['text']
                             is_first_rationale = False
                         else:
-                            # For subsequent rationales, keep the current logic
-                            improved_text = improve_rationale_text(rationale['text'])
+                            # For subsequent rationales, use the history
+                            improved_text = improve_rationale_text(rationale['text'], rationale_history, input_text)
                             logger.info(f"Improved subsequent rationale text: {improved_text}")
                             
-                            # if improved_text != "invalid":
+                            if improved_text != "invalid":
+                                # Only store and emit if not invalid
+                                rationale_history.append(improved_text)
                             logger.info(f"Emitting improved rationale as response chunk to session {session_id}")
                             socketio.emit('response_chunk', {'content': f"{improved_text} ({rationale['text']})"}, room=session_id)
 
