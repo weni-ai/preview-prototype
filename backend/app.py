@@ -90,6 +90,15 @@ def get_bedrock_runtime_client():
     )
     return session.client(service_name="bedrock-agent-runtime")
 
+def get_bedrock_completion_client():
+    session = boto3.Session(
+        aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
+        aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY'),
+        aws_session_token=os.getenv('AWS_SESSION_TOKEN'),
+        region_name=os.getenv('AWS_REGION')
+    )
+    return session.client(service_name="bedrock-runtime")
+
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
 def get_trace_summary(trace):
     try:
@@ -241,19 +250,36 @@ def improve_rationale_text(rationale_text: str) -> str:
         Remember: For invalid rationales, return EXACTLY "invalid". For valid ones, return only the transformed text without any quotes or additional formatting. NEVER mention ProductConcierge - always transform it into a direct action.
         """
 
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            max_tokens=150,
-            messages=[{
+        # Get the Bedrock runtime client
+        bedrock_client = get_bedrock_completion_client()
+
+        # Set the model ID for Amazon Nova Lite
+        model_id = "amazon.nova-lite-v1:0"
+
+        # Create the conversation message
+        conversation = [
+            {
                 "role": "user",
-                "content": prompt
-            }],
-            frequency_penalty=1.8,  # High frequency penalty to discourage word repetition
-            presence_penalty=1.2    # High presence penalty to encourage diverse vocabulary
+                "content": [{"text": prompt}]
+            }
+        ]
+        
+        # Send the request to Amazon Bedrock
+        response = bedrock_client.converse(
+            modelId=model_id,
+            messages=conversation,
+            inferenceConfig={
+                "maxTokens": 150,
+                "temperature": 0.5,
+                "topP": 0.9
+            }
         )
         
+        # Extract the response text
+        response_text = response["output"]["message"]["content"][0]["text"]
+        
         # Remove any quotes from the response
-        return response.choices[0].message.content.strip().strip('"\'')
+        return response_text.strip().strip('"\'')
     except Exception as e:
         logger.error(f"Error improving rationale text: {str(e)}")
         return rationale_text  # Return original text if transformation fails
