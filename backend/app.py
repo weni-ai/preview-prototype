@@ -13,6 +13,10 @@ from openai import OpenAI
 import uuid
 from werkzeug.utils import secure_filename
 import base64
+import datetime
+import re
+import hashlib
+import mimetypes
 
 # Only load .env file if it exists and don't override existing env vars
 load_dotenv(override=False)
@@ -374,11 +378,21 @@ def chat():
                         'knowledgeBaseId': knowledge_base_id,
                         'retrievalConfiguration': retrieval_configuration
                     }
-                ]
+                ],
+                'sessionAttributes': {
+                    'credentials': json.dumps({
+                        'CLIENT_ID': 'sa9VPQUSJ0m5RNmyaP2eEdgY1ZZMQ8At',
+                        'CLIENT_SECRET': 'nw3rRgMxw2MAt0ah'
+                    })
+                }
             }
         )
 
         event_stream = response["completion"]
+
+        is_first_rationale = True
+        first_rationale_text = None
+
         final_response = None
 
         for event in event_stream:
@@ -394,18 +408,44 @@ def chat():
                 # Debug the trace structure
                 logger.info(f"Received trace: {json.dumps(trace_data, indent=2)}")
 
+                if first_rationale_text and 'callerChain' in trace_data:
+                    caller_chain = trace_data['callerChain']
+                    # Check if callerChain is a list with more than one entry
+                    if isinstance(caller_chain, list) and len(caller_chain) > 1:
+                        # # Improve and emit the rationale for the first time
+                        # improved_text = improve_rationale_text(first_rationale_text)
+                        # logger.info(f"Improved first rationale text with multiple agents: {improved_text}")
+                        
+                        # if improved_text != "invalid":
+                        #     logger.info(f"Emitting first improved rationale to session {session_id}")
+                        #     socketio.emit('response_chunk', {'content': improved_text}, room=session_id)
+
+                        logger.info(f"Emitting first improved rationale to session {session_id}")
+                        socketio.emit('response_chunk', {'content': first_rationale_text}, room=session_id)
+
+                        first_rationale_text = None
+
                 # Check if this is a trace with orchestrationTrace
                 if 'trace' in trace_data and 'orchestrationTrace' in trace_data['trace']:
                     rationale = trace_data['trace']['orchestrationTrace'].get('rationale', {})
+                    
                     if rationale and 'text' in rationale:
-                        # Improve the rationale text before emitting
-                        improved_text = improve_rationale_text(rationale['text'])
-                        logger.info(f"Improved rationale text: {improved_text}")
-                        # Only emit if not marked as invalid
-                        if improved_text != "invalid":
-                            # Emit the improved text as a response chunk
+                        if is_first_rationale:
+                            # Save the raw text for the first rationale
+                            first_rationale_text = rationale['text']
+                            is_first_rationale = False
+                        else:
+                            # # For subsequent rationales, keep the current logic
+                            # improved_text = improve_rationale_text(rationale['text'])
+                            # logger.info(f"Improved subsequent rationale text: {improved_text}")
+                            
+                            # if improved_text != "invalid":
+                            #     logger.info(f"Emitting improved rationale as response chunk to session {session_id}")
+                            #     socketio.emit('response_chunk', {'content': improved_text}, room=session_id)
+
+                            # For subsequent rationales, keep the current logic
                             logger.info(f"Emitting improved rationale as response chunk to session {session_id}")
-                            socketio.emit('response_chunk', {'content': improved_text}, room=session_id)
+                            socketio.emit('response_chunk', {'content': rationale['text']}, room=session_id)
 
                 # Continue with the existing trace type handling
                 if 'type' in trace_data:
