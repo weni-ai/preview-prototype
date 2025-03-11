@@ -167,133 +167,83 @@ def get_collaborator_description(collaborator_name: str, instruction: str) -> st
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
 def improve_rationale_text(rationale_text: str, previous_rationales: list = [], user_input: str = "") -> str:
     try:
-        # Prepare previous rationales prompt section
-        previous_rationales_text = ""
-        if previous_rationales:
-            previous_rationales_text = "Previous rationales:\n" + "\n".join(f"- {r}" for r in previous_rationales) + "\n\n"
-
-            print(f"Previous Rationales: {previous_rationales}")
-        
-        # Include user input context if provided
-        user_context = ""
-        if user_input:
-            user_context = f"""
-        User's current message:
-        "{user_input}"
-        
-        Based on this user message, provide a rationale that is:
-        - Directly relevant to what the user is asking about
-        - Using similar language style and terminology as the user
-        - Addressing the specific topic or request mentioned
-        - Maintaining appropriate tone (formal/informal) based on user's style
-        
-        """
-        
-        prompt = f"""
-        Analyze this internal rationale and transform it into a brief, natural follow-up message OR mark it as invalid.
-
-        {user_context}{previous_rationales_text}Original rationale:
-        {rationale_text}
-
-        IMPORTANT RULES:
-        1. If the rationale matches ANY of these criteria, return EXACTLY "invalid":
-           - Greetings or welcomes
-           - Basic assistance offers
-           - Starting/initializing processes
-           - Basic verifications
-           - Simple acknowledgments
-           - Generic analysis statements
-           - Contains ANY mention of "ProductConcierge" (this is an internal agent name)
-           - Contains ANY technical terms (API, service, system, database, etc)
-           - Contains ANY reference to internal processes
-           - Mentions consulting or accessing internal components
-           - Contains user names or personal identifiers
-           - Is VERY SIMILAR to any of the previous rationales (to avoid redundancy)
-           RETURN EXACTLY "invalid" (without quotes)
-
-        2. Otherwise, if the rationale contains meaningful information, transform it following these guidelines:
-           - Return only the raw text without any quotes or formatting
-           - Keep the same language as the original text
-           - Make it very short and direct (max 15 words)
-           - Skip conversation starters like "Entendo que", "Hey!", "Deixa eu"
-           - Focus only on what you're doing right now
-           - Use active voice and present tense
-           - Keep technical details minimal
-           - Sound natural but professional
-           - Never make questions or use question marks
-           - Always make statements, not questions
-           - Use declarative sentences only
-           - Avoid repeating words, especially verbs like "buscando", "procurando"
-           - Use diverse vocabulary for similar actions
-           - NEVER mention ProductConcierge - transform these into direct actions about what's being done
-           - NEVER include user names or personal identifiers
-           - Focus on the ACTION being done, not HOW it's being done
-           - Make sure the message feels like a CONTINUATION of previous rationales, not repetitive
-           - Consider the user's specific request or query in the current message
-           - Match the tone and language style of the user when appropriate
-           - Reference specific elements or topics from the user's input when relevant
-           - Prioritize addressing what the user is actually asking about
-
-        Examples:
-
-        Basic/Invalid rationales that should return "invalid":
-        - "Dando as boas-vindas e oferecendo assistência ao usuário"
-        - "Processando a solicitação do usuário"
-        - "Analisando a entrada do usuário para fornecer uma resposta adequada"
-        - "Preparando para responder à solicitação"
-        - "Entendendo o contexto da conversa"
-        - "Avaliando a mensagem recebida"
-        - "Iniciando o processo de resposta"
-        - "Gerando uma resposta apropriada"
-        - "Verificando as informações fornecidas"
-        - "Processando o pedido de assistência"
-        - "Consultando o ProductConcierge sobre sugestões de roupas"
-        - "Utilizando o sistema de recomendação para buscar opções"
-        - "Acessando a base de conhecimento para encontrar informações"
-        - "Consultando o serviço de produtos para verificar disponibilidade"
-        - "Acionando o sistema de busca para encontrar alternativas"
-        - "Consultando o ProductConcierge para sugestões de roupas de Carnaval para Léo"
-        - "Buscando no sistema recomendações para João"
-        - "Acessando API de produtos para Maria"
-
-        Valid rationales that should be transformed:
-        Original: Consultando o ProductConcierge sobre sugestões de roupas formais
-        Better: Buscando roupas formais para você.
-
-        Original: ProductConcierge está analisando opções de fantasias de Carnaval
-        Better: Analisando opções de fantasias de Carnaval.
-
-        Original: Para atender à solicitação, precisarei buscar roupas adequadas para o Carnaval que sejam apropriadas para um jovem profissional
-        Better: Selecionando fantasias de Carnaval para ambiente profissional.
-
-        Original: Posso te ajudar a encontrar algo mais específico?
-        Better: Refinando opções mais específicas para você.
-
-        Original: Que tal procurarmos por roupas mais casuais?
-        Better: Explorando alternativas mais casuais agora.
-
-        Original: ProductConcierge está buscando sugestões de roupas de Carnaval
-        Better: Buscando sugestões de fantasias para o Carnaval.
-
-        Example with user input context:
-        User input: "Preciso de ideias para fantasias de Carnaval que sejam confortáveis para uma festa ao ar livre"
-        Original: Consultando o ProductConcierge para encontrar fantasias de Carnaval adequadas para uma festa externa
-        Better: Selecionando fantasias confortáveis para festa de Carnaval ao ar livre.
-
-        Remember: For invalid rationales, return EXACTLY "invalid". For valid ones, return only the transformed text without any quotes or additional formatting. NEVER mention ProductConcierge - always transform it into a direct action.
-        """
-
         # Get the Bedrock runtime client
         bedrock_client = get_bedrock_completion_client()
 
         # Set the model ID for Amazon Nova Lite
         model_id = "amazon.nova-lite-v1:0"
 
-        # Create the conversation message
+        # Prepare the complete instruction content for the user message
+        instruction_content = """
+RULES:
+1. CRITICAL: When returning "invalid", return ONLY the word invalid with NO additional text, quotes, punctuation, or formatting.
+
+2. Mark as invalid if the rationale:
+   - Contains greetings, generic assistance, or simple acknowledgments
+   - Mentions internal components (e.g., "ProductConcierge") without adding value
+   - Describes communication actions with the user (e.g., "Vou informar ao usuário")
+   - Is vague, generic, or lacks specific actionable content
+   - Conveys essentially the same information as any previous rationale, even if worded differently
+   - Addresses the same topic or message as the immediately previous rationale
+
+3. Transform all other rationales by:
+   - Keeping them concise and direct (max 15 words)
+   - Using active voice and present tense
+   - Removing conversation starters and technical jargon
+   - Clearly stating the current action or error condition
+   - Preserving essential details from the original rationale
+   - Returning ONLY the transformed text with NO additional explanation or formatting
+
+EXAMPLES:
+
+Valid transformations:
+"Consultando o ProductConcierge sobre sugestões de roupas formais" → Buscando roupas formais para você.
+
+"O usuário está procurando voos de Maceió para São Paulo para uma pessoa, com datas específicas. Vou utilizar o agente de viagens para buscar essas informações." → Verificando voos de Maceió para São Paulo nas datas especificadas.
+
+"Recebi um erro porque as datas fornecidas são no passado. Preciso informar ao usuário que é necessário fornecer datas futuras para a pesquisa." → Datas fornecidas estão no passado, necessário datas futuras.
+
+Invalid examples:
+"Dando as boas-vindas e oferecendo assistência ao usuário" → invalid
+
+"Vou informar ao usuário sobre o resultado da busca" → invalid
+
+"O agente de viagens informou que as datas fornecidas já passaram. Vou informar ao usuário e solicitar novas datas." → invalid
+
+Redundancy examples (second rationale invalid):
+1st: "Buscando um hotel em São Paulo com piscina e academia." → Localizando hotéis em São Paulo com piscina e academia.
+2nd: "Procurando hotéis em São Paulo que tenham piscina e academia disponíveis." → invalid
+
+1st: "Nenhum voo encontrado para as datas solicitadas." → Nenhum voo disponível nas datas solicitadas.
+2nd: "Nenhum voo disponível para as datas solicitadas, oferecendo alternativas." → invalid
+
+REMEMBER: Your output MUST be either the transformed rationale OR exactly the word invalid. Never add explanations, quotes, punctuation, or formatting.
+
+Analyze the following rationale text:
+"""
+
+        # Add user input context if available
+        if user_input:
+            instruction_content += f"""
+User's current message: "{user_input}"
+"""
+
+        # Add previous rationales if available
+        if previous_rationales:
+            instruction_content += f"""
+Previous rationales:
+{' '.join([f"- {r}" for r in previous_rationales])}
+"""
+
+        # Add the main instructions and few-shot examples within the instruction content
+        instruction_content += rationale_text
+
+        # Build conversation with just one user message and an expected assistant response
         conversation = [
+            # Single user message with all instructions and the rationale to analyze
             {
                 "role": "user",
-                "content": [{"text": prompt}]
+                "content": [{"text": instruction_content}]
             }
         ]
         
@@ -308,6 +258,7 @@ def improve_rationale_text(rationale_text: str, previous_rationales: list = [], 
             }
         )
         
+        print(f"Improvement Response: {response}")
         # Extract the response text
         response_text = response["output"]["message"]["content"][0]["text"]
         
@@ -481,8 +432,8 @@ def chat():
                         if improved_text != "invalid":
                             rationale_history.append(improved_text)
 
-                        logger.info(f"Emitting first improved rationale to session {session_id}")
-                        socketio.emit('response_chunk', {'content': f"{improved_text} ({first_rationale_text})"}, room=session_id)
+                            logger.info(f"Emitting first improved rationale to session {session_id}")
+                            socketio.emit('response_chunk', {'content': improved_text}, room=session_id)
 
                         first_rationale_text = None
 
@@ -503,8 +454,9 @@ def chat():
                             if improved_text != "invalid":
                                 # Only store and emit if not invalid
                                 rationale_history.append(improved_text)
-                            logger.info(f"Emitting improved rationale as response chunk to session {session_id}")
-                            socketio.emit('response_chunk', {'content': f"{improved_text} ({rationale['text']})"}, room=session_id)
+                                
+                                logger.info(f"Emitting improved rationale as response chunk to session {session_id}")
+                                socketio.emit('response_chunk', {'content': improved_text}, room=session_id)
 
                 # Continue with the existing trace type handling
                 if 'type' in trace_data:
