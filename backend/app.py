@@ -165,7 +165,7 @@ def get_collaborator_description(collaborator_name: str, instruction: str) -> st
         return "Team member"
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
-def improve_rationale_text(rationale_text: str, previous_rationales: list = [], user_input: str = "") -> str:
+def improve_rationale_text(rationale_text: str, previous_rationales: list = [], user_input: str = "", is_first_rationale: bool = False) -> str:
     try:
         # Get the Bedrock runtime client
         bedrock_client = get_bedrock_completion_client()
@@ -177,7 +177,16 @@ def improve_rationale_text(rationale_text: str, previous_rationales: list = [], 
         instruction_content = """
 RULES:
 1. CRITICAL: When returning "invalid", return ONLY the word invalid with NO additional text, quotes, punctuation, or formatting.
+"""
 
+        # Add first rationale-specific instructions
+        if is_first_rationale:
+            instruction_content += """
+2. IMPORTANT: This is the FIRST rationale. NEVER mark first rationales as invalid. Always improve them.
+
+"""
+
+        instruction_content += """
 2. Mark as invalid if the rationale:
    - Contains greetings, generic assistance, or simple acknowledgments
    - Mentions internal components (e.g., "ProductConcierge") without adding value
@@ -218,7 +227,15 @@ Redundancy examples (second rationale invalid):
 2nd: "Nenhum voo disponível para as datas solicitadas, oferecendo alternativas." → invalid
 
 REMEMBER: Your output MUST be either the transformed rationale OR exactly the word invalid. Never add explanations, quotes, punctuation, or formatting.
+"""
 
+        # First rationale reminder
+        if is_first_rationale:
+            instruction_content += """
+FINAL REMINDER: This is the FIRST rationale. You MUST improve it and NOT return "invalid". Transform it into a concise, clear message.
+"""
+
+        instruction_content += """
 Analyze the following rationale text:
 """
 
@@ -262,6 +279,11 @@ Previous rationales:
         # Extract the response text
         response_text = response["output"]["message"]["content"][0]["text"]
         
+        # For first rationales, make sure they're never "invalid"
+        if is_first_rationale and response_text.strip().lower() == "invalid":
+            # If somehow still got "invalid", force a generic improvement
+            return "Processando sua solicitação agora."
+            
         # Remove any quotes from the response
         return response_text.strip().strip('"\'')
     except Exception as e:
@@ -425,10 +447,11 @@ def chat():
                     caller_chain = trace_data['callerChain']
                     # Check if callerChain is a list with more than one entry
                     if isinstance(caller_chain, list) and len(caller_chain) > 1:
-                        # Improve and emit the rationale for the first time
-                        improved_text = improve_rationale_text(first_rationale_text, rationale_history, input_text)
+                        # Improve and emit the rationale for the first time, marking it as first
+                        improved_text = improve_rationale_text(first_rationale_text, rationale_history, input_text, is_first_rationale=True)
                         logger.info(f"Improved first rationale text with multiple agents: {improved_text}")
                         
+                        # For first rationale, we know it won't be "invalid", but checking just in case
                         if improved_text != "invalid":
                             rationale_history.append(improved_text)
 
