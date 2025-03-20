@@ -190,7 +190,7 @@ RULES:
 2. Mark as invalid if the rationale:
    - Contains greetings, generic assistance, or simple acknowledgments
    - Mentions internal components (e.g., "ProductConcierge") without adding value
-   - Describes communication actions with the user (e.g., "Vou informar ao usuário")
+   - Describes communication actions with the user (e.g., "I will inform the user")
    - Is vague, generic, or lacks specific actionable content
    - Conveys essentially the same information as any previous rationale, even if worded differently
    - Addresses the same topic or message as the immediately previous rationale
@@ -206,25 +206,25 @@ RULES:
 EXAMPLES:
 
 Valid transformations:
-"Consultando o ProductConcierge sobre sugestões de roupas formais" → Buscando roupas formais para você.
+"Consulting ProductConcierge for formal clothing suggestions" → Finding formal clothing for you.
 
-"O usuário está procurando voos de Maceió para São Paulo para uma pessoa, com datas específicas. Vou utilizar o agente de viagens para buscar essas informações." → Verificando voos de Maceió para São Paulo nas datas especificadas.
+"The user is looking for flights from Miami to New York for one person, with specific dates. I will use the travel agent to search for this information." → Checking flights from Miami to New York on specified dates.
 
-"Recebi um erro porque as datas fornecidas são no passado. Preciso informar ao usuário que é necessário fornecer datas futuras para a pesquisa." → Datas fornecidas estão no passado, necessário datas futuras.
+"I received an error because the provided dates are in the past. I need to inform the user that future dates are required for the search." → Dates provided are in the past, future dates needed.
 
 Invalid examples:
-"Dando as boas-vindas e oferecendo assistência ao usuário" → invalid
+"Welcoming and offering assistance to the user" → invalid
 
-"Vou informar ao usuário sobre o resultado da busca" → invalid
+"I will inform the user about the search results" → invalid
 
-"O agente de viagens informou que as datas fornecidas já passaram. Vou informar ao usuário e solicitar novas datas." → invalid
+"The travel agent indicated that the provided dates have already passed. I will inform the user and request new dates." → invalid
 
 Redundancy examples (second rationale invalid):
-1st: "Buscando um hotel em São Paulo com piscina e academia." → Localizando hotéis em São Paulo com piscina e academia.
-2nd: "Procurando hotéis em São Paulo que tenham piscina e academia disponíveis." → invalid
+1st: "Looking for a hotel in Chicago with pool and gym." → Finding hotels in Chicago with pool and gym.
+2nd: "Searching for hotels in Chicago that have a pool and gym available." → invalid
 
-1st: "Nenhum voo encontrado para as datas solicitadas." → Nenhum voo disponível nas datas solicitadas.
-2nd: "Nenhum voo disponível para as datas solicitadas, oferecendo alternativas." → invalid
+1st: "No flights found for the requested dates." → No flights available on requested dates.
+2nd: "No flights available for the requested dates, offering alternatives." → invalid
 
 REMEMBER: Your output MUST be either the transformed rationale OR exactly the word invalid. Never add explanations, quotes, punctuation, or formatting.
 """
@@ -282,7 +282,7 @@ Previous rationales:
         # For first rationales, make sure they're never "invalid"
         if is_first_rationale and response_text.strip().lower() == "invalid":
             # If somehow still got "invalid", force a generic improvement
-            return "Processando sua solicitação agora."
+            return "Processing your request now."
             
         # Remove any quotes from the response
         return response_text.strip().strip('"\'')
