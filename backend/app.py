@@ -18,10 +18,34 @@ import re
 import hashlib
 import mimetypes
 
+# Adicionando uma classe personalizada para serialização JSON
+class CustomJSONEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, datetime.datetime):
+            return obj.isoformat()
+        return super().default(obj)
+
+def process_datetime_objects(obj):
+    """
+    Recursively process objects to convert datetime objects to ISO format strings.
+    This is needed because socketio.emit can't handle datetime objects directly.
+    """
+    if isinstance(obj, datetime.datetime):
+        return obj.isoformat()
+    elif isinstance(obj, dict):
+        return {key: process_datetime_objects(value) for key, value in obj.items()}
+    elif isinstance(obj, list):
+        return [process_datetime_objects(item) for item in obj]
+    elif isinstance(obj, tuple):
+        return tuple(process_datetime_objects(item) for item in obj)
+    else:
+        return obj
+
 # Only load .env file if it exists and don't override existing env vars
 load_dotenv(override=False)
 
 app = Flask(__name__)
+app.json_encoder = CustomJSONEncoder  # Usando o encoder personalizado
 
 # Update CORS configuration to handle preflight requests properly
 CORS(app,
@@ -109,7 +133,7 @@ def get_trace_summary(trace):
         You are an AI agent naturally describing your current action. Write a first-person summary that feels conversational and engaging.
 
         Here's the trace of your action:
-        {json.dumps(trace, indent=2)}
+        {json.dumps(trace, indent=2, cls=CustomJSONEncoder)}
         
         Guidelines for your response:
         - Write a concise, one-line summary (maximum 10 words)
@@ -165,7 +189,108 @@ def get_collaborator_description(collaborator_name: str, instruction: str) -> st
         return "Team member"
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
-def improve_rationale_text(rationale_text: str, previous_rationales: list = [], user_input: str = "", is_first_rationale: bool = False) -> str:
+def route_rationale_improvement(rationale_text: str, previous_rationales: list = [], user_input: str = "", is_first_rationale: bool = False) -> str:
+    """
+    Função controladora que direciona o fluxo para a função especializada adequada 
+    dependendo se é o primeiro raciocínio ou raciocínios subsequentes.
+    """
+    if is_first_rationale:
+        return improve_first_rationale(rationale_text, user_input)
+    else:
+        return improve_subsequent_rationale(rationale_text, previous_rationales, user_input)
+
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
+def improve_first_rationale(rationale_text: str, user_input: str = "") -> str:
+    """
+    Função especializada para melhorar o primeiro raciocínio.
+    Sempre retorna uma versão melhorada, nunca marca como inválido.
+    """
+    try:
+        # Get the Bedrock runtime client
+        bedrock_client = get_bedrock_completion_client()
+
+        # Set the model ID for Amazon Nova Lite
+        model_id = "amazon.nova-lite-v1:0"
+
+        # Prepare the complete instruction content for the user message
+        instruction_content = """
+RULES:
+1. IMPORTANT: This is the FIRST rationale. NEVER mark first rationales as invalid. Always improve them.
+
+2. Transform the rationale by:
+   - Keeping it concise and direct (max 15 words)
+   - Using active voice and present tense
+   - Removing conversation starters and technical jargon
+   - Clearly stating the current action or error condition
+   - Preserving essential details from the original rationale
+   - Returning ONLY the transformed text with NO additional explanation or formatting
+
+EXAMPLES:
+
+Valid transformations:
+"Consulting ProductConcierge for formal clothing suggestions" → Finding formal clothing for you.
+
+"The user is looking for flights from Miami to New York for one person, with specific dates. I will use the travel agent to search for this information." → Checking flights from Miami to New York on specified dates.
+
+"I received an error because the provided dates are in the past. I need to inform the user that future dates are required for the search." → Dates provided are in the past, future dates needed.
+
+REMEMBER: Your output MUST be the transformed rationale. Never add explanations, quotes, punctuation, or formatting.
+
+FINAL REMINDER: This is the FIRST rationale. You MUST improve it and NOT return "invalid". Transform it into a concise, clear message.
+
+Analyze the following rationale text:
+"""
+
+        # Add user input context if available
+        if user_input:
+            instruction_content += f"""
+User's current message: "{user_input}"
+"""
+
+        # Add the rationale text to analyze
+        instruction_content += rationale_text
+
+        # Build conversation with just one user message and an expected assistant response
+        conversation = [
+            # Single user message with all instructions and the rationale to analyze
+            {
+                "role": "user",
+                "content": [{"text": instruction_content}]
+            }
+        ]
+        
+        # Send the request to Amazon Bedrock
+        response = bedrock_client.converse(
+            modelId=model_id,
+            messages=conversation,
+            inferenceConfig={
+                "maxTokens": 150,
+                "temperature": 0.5,
+                "topP": 0.9
+            }
+        )
+        
+        print(f"First Rationale Improvement Response: {response}")
+        # Extract the response text
+        response_text = response["output"]["message"]["content"][0]["text"]
+        
+        # For first rationales, make sure they're never "invalid"
+        if response_text.strip().lower() == "invalid":
+            # If somehow still got "invalid", force a generic improvement
+            return "Processing your request now."
+            
+        # Remove any quotes from the response
+        return response_text.strip().strip('"\'')
+    except Exception as e:
+        logger.error(f"Error improving first rationale text: {str(e)}")
+        return rationale_text  # Return original text if transformation fails
+
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
+def improve_subsequent_rationale(rationale_text: str, previous_rationales: list = [], user_input: str = "") -> str:
+    """
+    Função especializada para melhorar raciocínios subsequentes.
+    Pode marcar como "invalid" para evitar redundância e mensagens sem valor.
+    """
     try:
         # Get the Bedrock runtime client
         bedrock_client = get_bedrock_completion_client()
@@ -177,16 +302,7 @@ def improve_rationale_text(rationale_text: str, previous_rationales: list = [], 
         instruction_content = """
 RULES:
 1. CRITICAL: When returning "invalid", return ONLY the word invalid with NO additional text, quotes, punctuation, or formatting.
-"""
 
-        # Add first rationale-specific instructions
-        if is_first_rationale:
-            instruction_content += """
-2. IMPORTANT: This is the FIRST rationale. NEVER mark first rationales as invalid. Always improve them.
-
-"""
-
-        instruction_content += """
 2. Mark as invalid if the rationale:
    - Contains greetings, generic assistance, or simple acknowledgments
    - Mentions internal components (e.g., "ProductConcierge") without adding value
@@ -227,15 +343,7 @@ Redundancy examples (second rationale invalid):
 2nd: "No flights available for the requested dates, offering alternatives." → invalid
 
 REMEMBER: Your output MUST be either the transformed rationale OR exactly the word invalid. Never add explanations, quotes, punctuation, or formatting.
-"""
 
-        # First rationale reminder
-        if is_first_rationale:
-            instruction_content += """
-FINAL REMINDER: This is the FIRST rationale. You MUST improve it and NOT return "invalid". Transform it into a concise, clear message.
-"""
-
-        instruction_content += """
 Analyze the following rationale text:
 """
 
@@ -252,7 +360,7 @@ Previous rationales:
 {' '.join([f"- {r}" for r in previous_rationales])}
 """
 
-        # Add the main instructions and few-shot examples within the instruction content
+        # Add the rationale text to analyze
         instruction_content += rationale_text
 
         # Build conversation with just one user message and an expected assistant response
@@ -275,19 +383,14 @@ Previous rationales:
             }
         )
         
-        print(f"Improvement Response: {response}")
+        print(f"Subsequent Rationale Improvement Response: {response}")
         # Extract the response text
         response_text = response["output"]["message"]["content"][0]["text"]
-        
-        # For first rationales, make sure they're never "invalid"
-        if is_first_rationale and response_text.strip().lower() == "invalid":
-            # If somehow still got "invalid", force a generic improvement
-            return "Processing your request now."
             
         # Remove any quotes from the response
         return response_text.strip().strip('"\'')
     except Exception as e:
-        logger.error(f"Error improving rationale text: {str(e)}")
+        logger.error(f"Error improving subsequent rationale text: {str(e)}")
         return rationale_text  # Return original text if transformation fails
 
 def format_trace_type(trace_type: str) -> str:
@@ -437,18 +540,18 @@ def chat():
                 final_response = content
                 # Emit the chunk in real-time to specific session room
                 logger.info(f"Emitting response chunk to session {session_id}")
-                socketio.emit('response_chunk', {'content': content}, room=session_id)
+                socketio.emit('response_chunk', {'content': process_datetime_objects(content)}, room=session_id)
             elif 'trace' in event:
                 trace_data = event['trace']
                 # Debug the trace structure
-                logger.info(f"Received trace: {json.dumps(trace_data, indent=2)}")
+                logger.info(f"Received trace: {json.dumps(trace_data, indent=2, cls=CustomJSONEncoder)}")
 
                 if first_rationale_text and 'callerChain' in trace_data:
                     caller_chain = trace_data['callerChain']
                     # Check if callerChain is a list with more than one entry
                     if isinstance(caller_chain, list) and len(caller_chain) > 1:
                         # Improve and emit the rationale for the first time, marking it as first
-                        improved_text = improve_rationale_text(first_rationale_text, rationale_history, input_text, is_first_rationale=True)
+                        improved_text = route_rationale_improvement(first_rationale_text, rationale_history, input_text, is_first_rationale=True)
                         logger.info(f"Improved first rationale text with multiple agents: {improved_text}")
                         
                         # For first rationale, we know it won't be "invalid", but checking just in case
@@ -456,7 +559,7 @@ def chat():
                             rationale_history.append(improved_text)
 
                             logger.info(f"Emitting first improved rationale to session {session_id}")
-                            socketio.emit('response_chunk', {'content': improved_text}, room=session_id)
+                            socketio.emit('response_chunk', {'content': process_datetime_objects(improved_text)}, room=session_id)
 
                         first_rationale_text = None
 
@@ -471,7 +574,7 @@ def chat():
                             is_first_rationale = False
                         else:
                             # For subsequent rationales, use the history
-                            improved_text = improve_rationale_text(rationale['text'], rationale_history, input_text)
+                            improved_text = route_rationale_improvement(rationale['text'], rationale_history, input_text)
                             logger.info(f"Improved subsequent rationale text: {improved_text}")
                             
                             if improved_text != "invalid":
@@ -479,7 +582,7 @@ def chat():
                                 rationale_history.append(improved_text)
                                 
                                 logger.info(f"Emitting improved rationale as response chunk to session {session_id}")
-                                socketio.emit('response_chunk', {'content': improved_text}, room=session_id)
+                                socketio.emit('response_chunk', {'content': process_datetime_objects(improved_text)}, room=session_id)
 
                 # Continue with the existing trace type handling
                 if 'type' in trace_data:
@@ -513,7 +616,7 @@ def chat():
                     
                     # Emit the trace in real-time to specific session room
                     logger.info(f"Emitting trace update to session {session_id}")
-                    socketio.emit('trace_update', {'trace': formatted_trace}, room=session_id)
+                    socketio.emit('trace_update', {'trace': process_datetime_objects(formatted_trace)}, room=session_id)
                 else:
                     # For untyped traces
                     if not skip_trace_summary:
@@ -528,7 +631,7 @@ def chat():
                     
                     # Emit the trace in real-time to specific session room
                     logger.info(f"Emitting trace update to session {session_id}")
-                    socketio.emit('trace_update', {'trace': trace_data}, room=session_id)
+                    socketio.emit('trace_update', {'trace': process_datetime_objects(trace_data)}, room=session_id)
 
         return jsonify({
             'status': 'success'
